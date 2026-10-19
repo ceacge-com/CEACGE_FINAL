@@ -10,7 +10,7 @@ from reportlab.lib.utils import ImageReader
 from reportlab.lib import colors
 
 app=Flask(__name__)
-app.secret_key='V17-AZUL-GRANADA-VERDE-ROJO-FIX'
+app.secret_key='V18-SIN-LINEA-DIRECTOR-VER-COMPLETO-ELEGANTE'
 basedir=os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER=os.path.join(basedir,"fotos")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -54,15 +54,36 @@ def login_required(f):
 def admin_required(f):
     @wraps(f)
     def dec(*a,**kw):
-        if session.get('rol')!='admin': return "Solo admin <a href='/'>Volver</a>"
+        if session.get('rol')!='admin': return "Solo admin"
         return f(*a,**kw)
     return dec
 def gen_qr(text):
-    qr=qrcode.QRCode(box_size=6, border=1); qr.add_data(text); qr.make(fit=True)
+    qr=qrcode.QRCode(box_size=10, border=1); qr.add_data(text); qr.make(fit=True)
     img=qr.make_image(fill_color="black", back_color="white").convert('RGB')
     buf=io.BytesIO(); img.save(buf, format='PNG'); buf.seek(0); return buf
 def generar_codigo():
     return ''.join(secrets.choice(string.ascii_uppercase+string.digits) for _ in range(8))
+
+STYLE = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+body{font-family:'Inter',Arial;background:#f3f5f7;margin:0;padding:0}
+.card{background:white;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.08);padding:22px;margin:16px auto;max-width:1100px}
+.btn{padding:10px 16px;border-radius:10px;text-decoration:none;font-weight:600;display:inline-block;transition:.2s}
+.btn-primary{background:linear-gradient(90deg,#0a2a7a,#0a7a4a);color:white}
+.btn-blue{background:#e0f2fe;color:#0a2a7a;border:1px solid #0a2a7a}
+.btn-amber{background:#fef3c7;color:#92400e;border:1px solid #f59e0b}
+.input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #d1d5db;background:#f9fafb;outline:none}
+.input:focus{border-color:#0a2a7a;box-shadow:0 0 0 3px rgba(10,42,122,.15);background:white}
+.label{font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;display:block;text-transform:uppercase;letter-spacing:.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.topbar{background:white;padding:14px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 12px rgba(0,0,0,.06);position:sticky;top:0;z-index:10}
+table{border-collapse:collapse;width:100%;overflow:hidden;border-radius:12px}
+th{background:#0a2a7a;color:white;font-size:12px;padding:12px 8px;text-transform:uppercase}
+td{padding:10px 8px;border-bottom:1px solid #eef2f7;font-size:13px}
+.ver-box{background:linear-gradient(135deg,#f8fafc,#eef2ff);border:1px solid #e0e7ff;border-radius:16px;padding:20px}
+</style>
+"""
 
 @app.route('/login', methods=['GET','POST'])
 def login():
@@ -75,8 +96,8 @@ def login():
         cur.execute(adapt("SELECT * FROM centros WHERE codigo_acceso=?"),(u,)); centro=cur.fetchone()
         if centro:
             session['usuario']=centro['nombre']; session['rol']='centro'; session['centro_codigo']=centro['codigo']; conn.close(); return redirect('/')
-        conn.close(); return 'Código mal <a href=/login>volver</a>'
-    return '<body style="font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;background:linear-gradient(135deg,#0a2a7a,#0a7a4a)"><div style="background:white;padding:30px;border-radius:12px"><h2>CEACGE V17</h2><form method=post><input name=usuario placeholder="admin o CODIGO CENTRO" style="width:100%;padding:10px" required><br><br><input type=password name=password placeholder="password" style="width:100%;padding:10px"><br><br><button style="width:100%;padding:12px;background:linear-gradient(90deg,#0a2a7a,#0a7a4a);color:white;border:none">ENTRAR</button></form></div></body>'
+        conn.close(); return 'Código incorrecto <a href=/login>volver</a>'
+    return f"<body style='display:flex;justify-content:center;align-items:center;height:100vh;background:linear-gradient(135deg,#0a2a7a,#0a7a4a)'><div style='background:white;padding:32px;border-radius:20px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2)'><h2 style='color:#0a2a7a;margin:0 0 8px'>CEACGE V18</h2><p style='color:#6b7280;font-size:13px'>Acceso elegante - Admin y Centros</p><form method=post><label class=label>Usuario o Código Centro</label><input name=usuario class=input required><br><br><label class=label>Password</label><input type=password name=password class=input><br><br><button class='btn btn-primary' style='width:100%;padding:14px'>ENTRAR</button></form></div>{STYLE}</body>"
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect('/login')
@@ -96,58 +117,109 @@ def index():
         cur.execute("SELECT * FROM alumnos_primaria ORDER BY id DESC"); primaria=cur.fetchall()
         cur.execute("SELECT * FROM centros ORDER BY id DESC"); centros=cur.fetchall()
     conn.close()
-    return render_template_string("""
-    <body style="font-family:Arial;background:#f0f5f1;padding:15px"><b>{{session['usuario']}} ({{rol}})</b> - <a href='/logout'>Salir</a>
-    <h2 style="color:#0a2a7a">V17 - OFICIAL CON COLORES CORREGIDOS</h2>
-    <a href='/nuevo' style='background:linear-gradient(90deg,#0a2a7a,#0a7a4a);color:white;padding:10px;text-decoration:none;border-radius:6px'>+ ESBA/BACH</a>
-    <a href='/primaria/nuevo' style='background:#0a7a4a;color:white;padding:10px;text-decoration:none;border-radius:6px'>+ PRIMARIA</a>
-    {% if rol=='admin' %}<a href='/centros/nuevo' style='background:#0a2a7a;color:white;padding:10px;text-decoration:none;border-radius:6px'>+ CENTRO</a>{% endif %}
-    <h3>Secundaria ({{alumnos|length}})</h3>
-    <table border=1 cellpadding=5 style='width:100%;background:white;border-collapse:collapse'><tr style='background:#0a2a7a;color:white'><th>Foto</th><th>Alumno</th><th>Centro</th><th>Acción</th></tr>
-    {% for x in alumnos %}<tr><td>{% if x['foto'] %}<img src='/fotos/{{x['foto']}}' width=35>{% endif %}</td><td>{{x['nombre']}} {{x['apellidos']}}</td><td>{{x['centro_codigo']}}</td><td><a href='/alumnos/{{x['id']}}/ver' style='background:#e0f2fe;padding:4px 8px;border-radius:4px;text-decoration:none'>VER</a> <a href='/alumnos/{{x['id']}}/editar' style='background:#fef3c7;padding:4px 8px;border-radius:4px;text-decoration:none'>EDITAR</a> <a href='/notas/{{x['id']}}'>Notas</a> <a href='/pdf/{{x['id']}}' style='background:linear-gradient(90deg,#0a2a7a,#0a7a4a);color:white;padding:4px 8px;text-decoration:none;border-radius:4px'>PDF OFICIAL</a></td></tr>{% endfor %}</table>
-    <h3>Primaria ({{primaria|length}})</h3>
-    <table border=1 cellpadding=5 style='width:100%;background:white;border-collapse:collapse'>{% for p in primaria %}<tr><td>{{p['nombre']}} {{p['apellidos']}}</td><td><a href='/primaria/{{p['id']}}/ver'>VER</a> <a href='/primaria/{{p['id']}}/editar'>EDITAR</a></td></tr>{% endfor %}</table>
-    <h3>Centros ({{centros|length}})</h3>
-    <table border=1 cellpadding=5 style='width:100%;background:white;border-collapse:collapse'>{% for c in centros %}<tr><td>{{c['nombre']}} - {{c['codigo']}}</td><td><code>{{c['codigo_acceso']}}</code></td><td><a href='/centros/{{c['id']}}/ver'>VER</a> <a href='/centros/{{c['id']}}/generar_codigo'>Código</a></td></tr>{% endfor %}</table>
-    </body>""", alumnos=alumnos, primaria=primaria, centros=centros, rol=rol, session=session)
+    return render_template_string(f"""
+    <div class=topbar><b>👤 {{{{session['usuario']}}}} ({{{{rol}}}}) {{{{mi_codigo or ''}}}}</b><a href='/logout' class=btn style='background:#fee2e2;color:#991b1b'>Salir</a></div>
+    <div class=card><h2 style="color:#0a2a7a;margin:0">CEACGE V18 - Vista Completa Elegante</h2><p style="color:#6b7280">Sin línea, seguridad separada, solo Director</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+        <a href='/nuevo' class=btn btn-primary>+ Alumno ESBA/BACH</a>
+        <a href='/primaria/nuevo' class=btn style='background:#0a7a4a;color:white'>+ Alumno Primaria</a>
+        {{% if rol=='admin' %}}<a href='/centros/nuevo' class=btn style='background:#0a2a7a;color:white'>+ Centro</a>{{% endif %}}
+    </div></div>
 
-# RUTAS VER/EDITAR SIMPLES
+    <div class=card><h3 style="color:#0a2a7a">a) Secundaria y ESBA/Bach ({{{{alumnos|length}}}})</h3>
+    <table><tr><th>Foto</th><th>Alumno</th><th>Centro</th><th>Acción</th></tr>
+    {{% for x in alumnos %}}<tr><td>{{% if x['foto'] %}}<img src='/fotos/{{{{x['foto']}}}}' width=40 style='border-radius:8px'>{{% endif %}}</td><td><b>{{{{x['nombre']}}}} {{{{x['apellidos']}}}}</b><br><small style="color:#6b7280">{{{{x['contacto']}}}}</small></td><td><small>{{{{x['centro_nombre']}}}} - {{{{x['centro_codigo']}}}}</small></td><td><a href='/alumnos/{{{{x['id']}}}}/ver' class=btn btn-blue>VER</a> <a href='/alumnos/{{{{x['id']}}}}/editar' class=btn btn-amber>EDITAR</a> <a href='/notas/{{{{x['id']}}}}' class=btn>Notas</a> <a href='/pdf/{{{{x['id']}}}}' class='btn btn-primary'>PDF</a></td></tr>{{% endfor %}}</table></div>
+
+    <div class=card><h3 style="color:#0a7a4a">b) Primaria ({{{{primaria|length}}}})</h3>
+    <table><tr><th>Foto</th><th>Alumno</th><th>Filiación</th><th>Centro</th><th>Acción</th></tr>
+    {{% for p in primaria %}}<tr><td>{{% if p['foto'] %}}<img src='/fotos/{{{{p['foto']}}}}' width=36 style='border-radius:8px'>{{% endif %}}</td><td><b>{{{{p['nombre']}}}} {{{{p['apellidos']}}}}</b></td><td><small>Hijo de {{{{p['hijo_de']}}}} y {{{{p['y_de']}}}}</small></td><td><small>{{{{p['centro']}}}} - {{{{p['codigo']}}}}</small></td><td><a href='/primaria/{{{{p['id']}}}}/ver' class=btn btn-blue>VER</a> <a href='/primaria/{{{{p['id']}}}}/editar' class=btn btn-amber>EDITAR</a></td></tr>{{% endfor %}}</table></div>
+
+    <div class=card><h3 style="color:#0a2a7a">c) Centros ({{{{centros|length}}}})</h3>
+    <table><tr><th>Nombre</th><th>Código</th><th>Localidad</th><th>Código Acceso</th><th>Acción</th></tr>
+    {{% for c in centros %}}<tr><td><b>{{{{c['nombre']}}}}</b></td><td>{{{{c['codigo']}}}}</td><td>{{{{c['localidad']}}}}</td><td><code style='background:#f1f5f9;padding:6px 8px;border-radius:6px'>{{{{c['codigo_acceso'] or 'SIN'}}}}</code></td><td><a href='/centros/{{{{c['id']}}}}/ver' class=btn btn-blue>VER</a> <a href='/centros/{{{{c['id']}}}}/editar' class=btn btn-amber>EDITAR</a> {{% if rol=='admin' %}}<a href='/centros/{{{{c['id']}}}}/generar_codigo' class=btn style='background:#0a7a4a;color:white'>Generar Código</a>{{% endif %}}</td></tr>{{% endfor %}}</table></div>
+    {STYLE}
+    """, alumnos=alumnos, primaria=primaria, centros=centros, rol=rol, mi_codigo=mi_codigo, session=session)
+
 @app.route('/alumnos/<int:id>/ver')
 @login_required
 def alumno_ver(id):
-    conn=get_conn(); cur=conn.cursor(); cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"),(id,)); a=cur.fetchone(); conn.close()
-    return render_template_string("<body style='font-family:Arial;padding:20px'><a href='/'>Volver</a><h2>{{a['nombre']}} {{a['apellidos']}}</h2><p>{{a['natural_de']}} - {{a['distrito']}} - {{a['provincia']}}</p><p>{{a['centro_nombre']}} - {{a['centro_codigo']}}</p><p>Contacto: {{a['contacto']}} Email: {{a['email']}}</p><a href='/alumnos/{{a['id']}}/editar'>EDITAR</a> | <a href='/pdf/{{a['id']}}'>PDF OFICIAL</a></body>", a=a)
+    conn=get_conn(); cur=conn.cursor(); cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"),(id,)); a=cur.fetchone()
+    if not a: conn.close(); return "No encontrado"
+    qr_buf=gen_qr(f"CEACGE-{id:04d} | {a['nombre']} {a['apellidos']} | {a['centro_codigo']} | ceacge-final.onrender.com/pdf/{id}")
+    import base64; qr_b64=base64.b64encode(qr_buf.getvalue()).decode()
+    conn.close()
+    return render_template_string(f"""
+    <div class=topbar><a href='/' class=btn btn-blue>← Volver</a><a href='/pdf/{id}' class='btn btn-primary'>Ver PDF Oficial</a></div>
+    <div class=card><h2 style="color:#c00000">Ficha Completa Alumno</h2>
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+        <div><img src='/fotos/{a['foto']}' width=180 style='border-radius:16px;border:3px solid #0a7a4a;box-shadow:0 8px 20px rgba(0,0,0,.15)' onerror="this.style.display='none'"><br><br>
+        <div class=ver-box><b>QR Verificación</b><br><img src='data:image/png;base64,{qr_b64}' width=150><br><small>COD: CEA-{id:04d}-AA</small></div></div>
+        <div style="flex:1;min-width:300px">
+        <table><tr><td><b>Nombre</b></td><td>{a['nombre']}</td></tr>
+        <tr><td><b>Apellidos</b></td><td>{a['apellidos']}</td></tr>
+        <tr><td><b>Natural de</b></td><td>{a['natural_de']}</td></tr>
+        <tr><td><b>Distrito</b></td><td>{a['distrito']}</td></tr>
+        <tr><td><b>Provincia</b></td><td>{a['provincia']}</td></tr>
+        <tr><td><b>Contacto Alumno</b></td><td>{a['contacto']}</td></tr>
+        <tr><td><b>Email Alumno</b></td><td>{a['email']}</td></tr>
+        <tr><td><b>Centro Nombre</b></td><td style="color:#c00000;font-weight:700">{a['centro_nombre']}</td></tr>
+        <tr><td><b>Centro Código</b></td><td>{a['centro_codigo']}</td></tr>
+        <tr><td><b>Centro Localidad</b></td><td>{a['centro_localidad']}</td></tr>
+        <tr><td><b>Centro Contacto</b></td><td>{a['centro_contacto']}</td></tr>
+        <tr><td><b>Año Escolar</b></td><td>{a['anio']}</td></tr>
+        <tr><td><b>Centro resumen</b></td><td>{a['centro']}</td></tr>
+        </table><br><a href='/alumnos/{id}/editar' class='btn btn-amber'>EDITAR INFORMACIÓN</a> <a href='/notas/{id}' class='btn btn-primary'>EDITAR NOTAS</a></div></div></div>{STYLE}
+    """, a=a)
+
+@app.route('/primaria/<int:id>/ver')
+@login_required
+def primaria_ver(id):
+    conn=get_conn(); cur=conn.cursor(); cur.execute(adapt("SELECT * FROM alumnos_primaria WHERE id=?"),(id,)); p=cur.fetchone(); conn.close()
+    return render_template_string(f"<div class=topbar><a href='/' class=btn btn-blue>Volver</a></div><div class=card><h2 style='color:#0a7a4a'>Primaria - {p['nombre']} {p['apellidos']}</h2><table><tr><td>Hijo de</td><td>{p['hijo_de']} y {p['y_de']}</td></tr><tr><td>Fecha Nac.</td><td>{p['fecha_nacimiento']}</td></tr><tr><td>Centro</td><td>{p['centro']} - {p['localidad']} - {p['codigo']}</td></tr><tr><td>Año</td><td>{p['anio']}</td></tr></table><br><a href='/primaria/{id}/editar' class='btn btn-amber'>EDITAR</a></div>{STYLE}", p=p)
+
+@app.route('/centros/<int:id>/ver')
+@login_required
+def centro_ver(id):
+    conn=get_conn(); cur=conn.cursor(); cur.execute(adapt("SELECT * FROM centros WHERE id=?"),(id,)); c=cur.fetchone()
+    qr_buf=gen_qr(f"CENTRO {c['codigo']} | {c['nombre']} | {c['codigo_acceso']}"); import base64; qr_b64=base64.b64encode(qr_buf.getvalue()).decode()
+    conn.close()
+    return render_template_string(f"""
+    <div class=topbar><a href='/' class=btn btn-blue>Volver</a></div>
+    <div class=card><h2 style='color:#0a2a7a'>Centro - {c['nombre']}</h2>
+    <div style="display:flex;gap:20px"><div class=ver-box><img src='data:image/png;base64,{qr_b64}' width=140><br><small>Acceso Centro</small></div>
+    <table style='flex:1'><tr><td><b>Nombre</b></td><td>{c['nombre']}</td></tr><tr><td><b>Código</b></td><td>{c['codigo']}</td></tr><tr><td><b>Localidad</b></td><td>{c['localidad']}</td></tr><tr><td><b>Contacto</b></td><td>{c['contacto']}</td></tr><tr><td><b>Email</b></td><td>{c['email']}</td></tr><tr><td><b>Código Acceso</b></td><td><code style='font-size:18px;background:#f1f5f9;padding:8px 12px;border-radius:8px'>{c['codigo_acceso']}</code></td></tr></table></div><br><a href='/centros/{id}/editar' class='btn btn-amber'>EDITAR</a> <a href='/centros/{id}/generar_codigo' class='btn btn-primary'>Generar Nuevo Código</a></div>{STYLE}
+    """, c=c)
 
 @app.route('/alumnos/<int:id>/editar', methods=['GET','POST'])
 @login_required
 def alumno_editar(id):
     conn=get_conn(); cur=conn.cursor(); cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"),(id,)); a=cur.fetchone()
     if request.method=='POST':
-        cur.execute(adapt("UPDATE alumnos SET nombre=?,apellidos=?,natural_de=?,distrito=?,provincia=?,contacto=?,email=?,centro_nombre=?,centro_codigo=?,centro_localidad=?,centro_contacto=?,anio=? WHERE id=?"),(request.form['nombre'],request.form['apellidos'],request.form['natural_de'],request.form['distrito'],request.form['provincia'],request.form['contacto'],request.form['email'],request.form['centro_nombre'],request.form['centro_codigo'],request.form['centro_localidad'],request.form['centro_contacto'],request.form['anio'],id))
-        conn.commit(); conn.close(); return redirect('/')
+        cur.execute(adapt("UPDATE alumnos SET nombre=?,apellidos=?,natural_de=?,distrito=?,provincia=?,contacto=?,email=?,centro_nombre=?,centro_codigo=?,centro_localidad=?,centro_contacto=?,anio=? WHERE id=?"),(request.form['nombre'],request.form['apellidos'],request.form['natural_de'],request.form['distrito'],request.form['provincia'],request.form['contacto'],request.form['email'],request.form['centro_nombre'],request.form['centro_codigo'],request.form['centro_localidad'],request.form['centro_contacto'],request.form['anio'],id)); conn.commit(); conn.close(); return redirect(f'/alumnos/{id}/ver')
     conn.close()
-    return render_template_string("<body style='font-family:Arial;padding:20px'><h2>Editar {{a['nombre']}}</h2><form method=post>Nombre:<input name=nombre value='{{a['nombre']}}'><br>Apellidos:<input name=apellidos value='{{a['apellidos']}}'><br>Natural:<input name=natural_de value='{{a['natural_de']}}'><br>Distrito:<input name=distrito value='{{a['distrito']}}'><br>Provincia:<input name=provincia value='{{a['provincia']}}'><br>Contacto:<input name=contacto value='{{a['contacto']}}'><br>Email:<input name=email value='{{a['email']}}'><br>Centro:<input name=centro_nombre value='{{a['centro_nombre']}}'><br>Codigo:<input name=centro_codigo value='{{a['centro_codigo']}}'><br>Localidad:<input name=centro_localidad value='{{a['centro_localidad']}}'><br>Contacto centro:<input name=centro_contacto value='{{a['centro_contacto']}}'><br>Año:<input name=anio value='{{a['anio']}}'><br><button>Guardar</button></form></body>", a=a)
-
-@app.route('/primaria/<int:id>/ver')
-@login_required
-def primaria_ver(id):
-    conn=get_conn(); cur=conn.cursor(); cur.execute(adapt("SELECT * FROM alumnos_primaria WHERE id=?"),(id,)); p=cur.fetchone(); conn.close()
-    return render_template_string("<body><a href='/'>Volver</a><h2>{{p['nombre']}} {{p['apellidos']}}</h2><p>Hijo de {{p['hijo_de']}} y {{p['y_de']}}</p></body>", p=p)
+    return render_template_string(f"<div class=topbar><a href='/' class=btn>Volver</a></div><div class=card style='max-width:700px'><h2>Editar Alumno</h2><form method=post class=grid><div><label class=label>Nombre</label><input name=nombre value='{a['nombre']}' class=input></div><div><label class=label>Apellidos</label><input name=apellidos value='{a['apellidos']}' class=input></div><div><label class=label>Natural</label><input name=natural_de value='{a['natural_de']}' class=input></div><div><label class=label>Distrito</label><input name=distrito value='{a['distrito']}' class=input></div><div><label class=label>Provincia</label><input name=provincia value='{a['provincia']}' class=input></div><div><label class=label>Contacto</label><input name=contacto value='{a['contacto']}' class=input></div><div><label class=label>Email</label><input name=email value='{a['email']}' class=input></div><div><label class=label>Centro Nombre</label><input name=centro_nombre value='{a['centro_nombre']}' class=input></div><div><label class=label>Código Centro</label><input name=centro_codigo value='{a['centro_codigo']}' class=input></div><div><label class=label>Localidad</label><input name=centro_localidad value='{a['centro_localidad']}' class=input></div><div><label class=label>Contacto Centro</label><input name=centro_contacto value='{a['centro_contacto']}' class=input></div><div><label class=label>Año</label><input name=anio value='{a['anio']}' class=input></div><div style='grid-column:1/-1'><button class='btn btn-primary' style='width:100%;padding:14px;margin-top:10px'>GUARDAR CAMBIOS</button></div></form></div>{STYLE}", a=a)
 
 @app.route('/primaria/<int:id>/editar', methods=['GET','POST'])
 @login_required
 def primaria_editar(id):
     conn=get_conn(); cur=conn.cursor(); cur.execute(adapt("SELECT * FROM alumnos_primaria WHERE id=?"),(id,)); p=cur.fetchone()
     if request.method=='POST':
-        cur.execute(adapt("UPDATE alumnos_primaria SET nombre=?,apellidos=?,hijo_de=?,y_de=?,fecha_nacimiento=?,centro=?,localidad=?,codigo=?,anio=? WHERE id=?"),(request.form['nombre'],request.form['apellidos'],request.form['hijo_de'],request.form['y_de'],request.form['fecha_nacimiento'],request.form['centro'],request.form['localidad'],request.form['codigo'],request.form['anio'],id)); conn.commit(); conn.close(); return redirect('/')
+        cur.execute(adapt("UPDATE alumnos_primaria SET nombre=?,apellidos=?,hijo_de=?,y_de=?,fecha_nacimiento=?,centro=?,localidad=?,codigo=?,anio=? WHERE id=?"),(request.form['nombre'],request.form['apellidos'],request.form['hijo_de'],request.form['y_de'],request.form['fecha_nacimiento'],request.form['centro'],request.form['localidad'],request.form['codigo'],request.form['anio'],id)); conn.commit(); conn.close(); return redirect(f'/primaria/{id}/ver')
     conn.close()
-    return render_template_string("<body><form method=post><input name=nombre value='{{p['nombre']}}'><input name=apellidos value='{{p['apellidos']}}'><button>Guardar</button></form></body>", p=p)
+    return f"<div class=card style='max-width:600px'><h2>Editar Primaria</h2><form method=post class=grid><div><label class=label>Nombre</label><input name=nombre value='{p['nombre']}' class=input></div><div><label class=label>Apellidos</label><input name=apellidos value='{p['apellidos']}' class=input></div><div><label class=label>Hijo de</label><input name=hijo_de value='{p['hijo_de']}' class=input></div><div><label class=label>Y de</label><input name=y_de value='{p['y_de']}' class=input></div><div><label class=label>Fecha</label><input name=fecha_nacimiento value='{p['fecha_nacimiento']}' type=date class=input></div><div><label class=label>Centro</label><input name=centro value='{p['centro']}' class=input></div><div><label class=label>Localidad</label><input name=localidad value='{p['localidad']}' class=input></div><div><label class=label>Código</label><input name=codigo value='{p['codigo']}' class=input></div><div><label class=label>Año</label><input name=anio value='{p['anio']}' class=input></div><button class='btn btn-primary' style='grid-column:1/-1;padding:14px'>Guardar</button></form></div>{STYLE}"
 
-@app.route('/centros/<int:id>/ver')
+@app.route('/centros/<int:id>/editar', methods=['GET','POST'])
 @login_required
-def centro_ver(id):
-    conn=get_conn(); cur=conn.cursor(); cur.execute(adapt("SELECT * FROM centros WHERE id=?"),(id,)); c=cur.fetchone(); conn.close()
-    return render_template_string("<body><a href='/'>Volver</a><h2>{{c['nombre']}} {{c['codigo']}}</h2><p>Localidad: {{c['localidad']}}</p><p>Cod Acceso: {{c['codigo_acceso']}}</p><a href='/centros/{{c['id']}}/generar_codigo'>Generar nuevo código</a></body>", c=c)
+def centro_editar(id):
+    conn=get_conn(); cur=conn.cursor(); cur.execute(adapt("SELECT * FROM centros WHERE id=?"),(id,)); c=cur.fetchone()
+    if request.method=='POST':
+        if session.get('rol')!='admin':
+            cur.execute(adapt("UPDATE centros SET contacto=?,email=? WHERE id=?"),(request.form['contacto'],request.form['email'],id))
+        else:
+            cur.execute(adapt("UPDATE centros SET nombre=?,codigo=?,localidad=?,contacto=?,email=? WHERE id=?"),(request.form['nombre'],request.form['codigo'],request.form['localidad'],request.form['contacto'],request.form['email'],id))
+        conn.commit(); conn.close(); return redirect(f'/centros/{id}/ver')
+    conn.close()
+    return render_template_string(f"<div class=card style='max-width:600px'><h2>Editar Centro {c['nombre']}</h2><form method=post class=grid><div><label class=label>Nombre</label><input name=nombre value='{c['nombre']}' class=input></div><div><label class=label>Código</label><input name=codigo value='{c['codigo']}' class=input></div><div><label class=label>Localidad</label><input name=localidad value='{c['localidad']}' class=input></div><div><label class=label>Contacto</label><input name=contacto value='{c['contacto']}' class=input></div><div><label class=label>Email</label><input name=email value='{c['email']}' class=input></div><button class='btn btn-primary' style='grid-column:1/-1;padding:14px'>Guardar Centro</button></form></div>{STYLE}", c=c)
 
 @app.route('/centros/<int:id>/generar_codigo')
 @login_required
@@ -160,7 +232,7 @@ def generar_codigo_centro(id):
     if u: cur.execute(adapt("UPDATE usuarios SET password=? WHERE id=?"),(generate_password_hash(nuevo),u['id']))
     else: cur.execute(adapt("INSERT INTO usuarios (usuario,password,rol,centro_codigo) VALUES (?,?,?,?)"),(centro['codigo'],generate_password_hash(nuevo),'centro',centro['codigo']))
     conn.commit(); conn.close()
-    return f"<body><h2>Código nuevo para {centro['nombre']}: {nuevo}</h2><a href='/'>Volver</a></body>"
+    return f"<div class=card><h2>Código nuevo para {centro['nombre']}: <span style='background:#f1f5f9;padding:10px 16px;border-radius:10px;font-size:22px'>{nuevo}</span></h2><p>Usuario: {centro['codigo']}</p><a href='/' class=btn btn-primary>Volver</a></div>{STYLE}"
 
 @app.route('/nuevo', methods=['GET','POST'])
 @login_required
@@ -170,7 +242,28 @@ def nuevo():
         if foto and foto.filename: fn=secure_filename(foto.filename); foto.save(os.path.join(UPLOAD_FOLDER, fn))
         cur.execute(adapt("INSERT INTO alumnos (nombre,apellidos,natural_de,distrito,provincia,centro,foto,anio,contacto,email,centro_nombre,centro_codigo,centro_localidad,centro_contacto) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"),(request.form['nombre'],request.form['apellidos'],request.form['natural_de'],request.form['distrito'],request.form['provincia'],request.form['centro'],fn,request.form['anio'],request.form['contacto'],request.form['email'],request.form['centro_nombre'],request.form['centro_codigo'],request.form['centro_localidad'],request.form['centro_contacto']))
         conn.commit(); cur.execute(adapt("SELECT id FROM alumnos ORDER BY id DESC LIMIT 1")); nid=cur.fetchone()['id']; conn.close(); return redirect(f'/notas/{nid}')
-    return "<body><h2>Nuevo ESBA</h2><form method=post enctype=multipart/form-data>Nombre:<input name=nombre required><br>Apellidos:<input name=apellidos required><br>Natural:<input name=natural_de value=VABE><br>Distrito:<input name=distrito value=KOGO><br>Provincia:<input name=provincia value=LITORAL><br>Contacto:<input name=contacto><br>Email:<input name=email><br>Centro nombre:<input name=centro_nombre value='IPES PADRE SANTY' required><br>Codigo:<input name=centro_codigo value='IPES-007' required><br>Localidad:<input name=centro_localidad value=BATA><br>Contacto centro:<input name=centro_contacto><br>Centro resumen:<input name=centro value='PADRE SANTY - BATA'><br>Año:<input name=anio value='2023-2024'><br>Foto:<input type=file name=foto><br><button>Guardar</button></form></body>"
+    return f"""
+    <div class=topbar><a href='/' class=btn btn-blue>← Volver</a></div>
+    <div class=card style='max-width:800px'><h2 style='color:#0a2a7a'>✨ Nuevo Alumno ESBA/Bach</h2>
+    <form method=post enctype=multipart/form-data class=grid>
+        <div><label class=label>Nombre</label><input name=nombre required class=input></div>
+        <div><label class=label>Apellidos</label><input name=apellidos required class=input></div>
+        <div><label class=label>Natural de</label><input name=natural_de value=VABE class=input></div>
+        <div><label class=label>Distrito</label><input name=distrito value=KOGO class=input></div>
+        <div><label class=label>Provincia</label><input name=provincia value=LITORAL class=input></div>
+        <div><label class=label>Contacto</label><input name=contacto class=input></div>
+        <div><label class=label>Email</label><input name=email class=input></div>
+        <div><label class=label>Año Escolar</label><input name=anio value='2023-2024' class=input></div>
+        <div><label class=label>Foto</label><input type=file name=foto class=input></div>
+        <div style='grid-column:1/-1;height:1px;background:#e5e7eb;margin:10px 0'></div>
+        <div><label class=label style='color:#c00000'>Centro Nombre</label><input name=centro_nombre value='IPES PADRE SANTY' required class=input></div>
+        <div><label class=label>Código Centro</label><input name=centro_codigo value='IPES-007' required class=input></div>
+        <div><label class=label>Localidad Centro</label><input name=centro_localidad value=BATA class=input></div>
+        <div><label class=label>Contacto Centro</label><input name=centro_contacto class=input></div>
+        <div style='grid-column:1/-1'><label class=label>Centro Resumen</label><input name=centro value='PADRE SANTY - BATA' class=input></div>
+        <button class='btn btn-primary' style='grid-column:1/-1;padding:16px'>GUARDAR Y PASAR A NOTAS</button>
+    </form></div>{STYLE}
+    """
 
 @app.route('/primaria/nuevo', methods=['GET','POST'])
 @login_required
@@ -179,7 +272,7 @@ def primaria_nuevo():
         conn=get_conn(); cur=conn.cursor()
         cur.execute(adapt("INSERT INTO alumnos_primaria (nombre,apellidos,hijo_de,y_de,fecha_nacimiento,centro,localidad,codigo,anio,centro_codigo) VALUES (?,?,?,?,?,?,?,?,?,?)"),(request.form['nombre'],request.form['apellidos'],request.form['hijo_de'],request.form['y_de'],request.form['fecha_nacimiento'],request.form['centro'],request.form['localidad'],request.form['codigo'],request.form['anio'],request.form['centro_codigo']))
         conn.commit(); conn.close(); return redirect('/')
-    return "<body><h2>Nuevo Primaria</h2><form method=post>Nombre:<input name=nombre><br>Apellidos:<input name=apellidos><br>Hijo de:<input name=hijo_de><br>Y de:<input name=y_de><br>Fecha:<input name=fecha_nacimiento type=date><br>Centro:<input name=centro><br>Localidad:<input name=localidad><br>Codigo:<input name=codigo><br>Centro_codigo:<input name=centro_codigo><br>Año:<input name=anio value='2023-2024'><br><button>Guardar</button></form></body>"
+    return f"<div class=topbar><a href='/' class=btn>Volver</a></div><div class=card style='max-width:700px'><h2 style='color:#0a7a4a'>Nuevo Alumno Primaria</h2><form method=post class=grid><div><label class=label>Nombre</label><input name=nombre required class=input></div><div><label class=label>Apellidos</label><input name=apellidos required class=input></div><div><label class=label>Hijo de</label><input name=hijo_de required class=input></div><div><label class=label>Y de</label><input name=y_de required class=input></div><div><label class=label>Fecha Nac.</label><input name=fecha_nacimiento type=date required class=input></div><div><label class=label>Centro</label><input name=centro required class=input></div><div><label class=label>Localidad</label><input name=localidad required class=input></div><div><label class=label>Código</label><input name=codigo required class=input></div><div><label class=label>Centro Código vinculación</label><input name=centro_codigo class=input></div><div><label class=label>Año</label><input name=anio value='2023-2024' class=input></div><button class='btn btn-primary' style='grid-column:1/-1;padding:14px;background:#0a7a4a'>Guardar Primaria</button></form></div>{STYLE}"
 
 @app.route('/centros/nuevo', methods=['GET','POST'])
 @login_required
@@ -190,9 +283,8 @@ def centros_nuevo():
         cur.execute(adapt("INSERT INTO centros (nombre,codigo,localidad,contacto,email,codigo_acceso) VALUES (?,?,?,?,?,?)"),(request.form['nombre'],request.form['codigo'],request.form['localidad'],request.form['contacto'],request.form['email'],codigo_acceso))
         cur.execute(adapt("INSERT INTO usuarios (usuario,password,rol,centro_codigo) VALUES (?,?,?,?)"),(request.form['codigo'],generate_password_hash(codigo_acceso),'centro',request.form['codigo']))
         conn.commit(); conn.close(); return redirect('/')
-    return "<body><h2>Nuevo Centro</h2><form method=post>Nombre:<input name=nombre><br>Codigo:<input name=codigo><br>Localidad:<input name=localidad><br>Contacto:<input name=contacto><br>Email:<input name=email><br><button>Guardar + Código</button></form></body>"
+    return f"<div class=topbar><a href='/' class=btn>Volver</a></div><div class=card style='max-width:600px'><h2 style='color:#0a2a7a'>Nuevo Centro - Elegante</h2><form method=post class=grid><div><label class=label>Nombre Centro</label><input name=nombre required class=input></div><div><label class=label>Código</label><input name=codigo required class=input></div><div><label class=label>Localidad</label><input name=localidad required class=input></div><div><label class=label>Contacto</label><input name=contacto class=input></div><div style='grid-column:1/-1'><label class=label>Email</label><input name=email class=input></div><button class='btn btn-primary' style='grid-column:1/-1;padding:14px'>Crear Centro + Código Acceso</button></form></div>{STYLE}"
 
-# BLOQUES EXACTOS DE TU HOJA OFICIAL (como en tu PDF)
 BLOQUES_IZQ = [
  ("1 ESBA", ["Lengua Española y Lit","Matemáticas","Geografía Gra. Y de GE","Ciencias Naturales I","E. Plástica y Visual I","Religión","Francés","Inglés","E. Física"]),
  ("1 ESBA", ["Lengua Española y Lit","Matemáticas","Geografía Gra. Y de GE","Ciencias Naturales I","E. Plástica y Visual I","Religión","Francés","Inglés","E. Física"]),
@@ -223,14 +315,14 @@ def notas(id):
                 if o or e: cur.execute(adapt("INSERT INTO notas (alumno_id,curso,asignatura,ord,extra) VALUES (?,?,?,?,?)"),(id,titulo,mat,o,e))
         conn.commit(); conn.close(); return redirect('/')
     cur.execute(adapt("SELECT * FROM notas WHERE alumno_id=?"),(id,)); db=cur.fetchall(); nm={(n['curso'],n['asignatura']):(n['ord'],n['extra']) for n in db}; conn.close()
-    h=f"<body style='font-family:Arial;padding:15px'><h2>Notas {alum['nombre']} {alum['apellidos']}</h2><form method=post>"
+    h=f"<div class=topbar><a href='/' class=btn>Volver</a></div><div class=card><h2>Notas {alum['nombre']} {alum['apellidos']}</h2><form method=post>"
     for bloque in BLOQUES_IZQ+BLOQUES_DER:
         titulo=bloque[0]; lista=bloque[1]
-        h+=f"<h4 style='background:linear-gradient(90deg,#0a2a7a,#0a7a4a);color:white;padding:6px'>{titulo}</h4><table border=1 style='width:100%;border-collapse:collapse'>"
+        h+=f"<h4 style='background:linear-gradient(90deg,#0a2a7a,#0a7a4a);color:white;padding:8px;border-radius:8px'>{titulo}</h4><table><tr><th>Asignatura</th><th>Ord</th><th>Extra</th></tr>"
         for mat in lista:
-            o,e=nm.get((titulo,mat),('','')); h+=f"<tr><td>{mat}</td><td><input name='{titulo}__{mat}__o' value='{o}' style='width:50px'></td><td><input name='{titulo}__{mat}__e' value='{e}' style='width:50px'></td></tr>"
+            o,e=nm.get((titulo,mat),('','')); h+=f"<tr><td>{mat}</td><td><input name='{titulo}__{mat}__o' value='{o}' style='width:60px' class=input></td><td><input name='{titulo}__{mat}__e' value='{e}' style='width:60px' class=input></td></tr>"
         h+="</table>"
-    h+="<br><button style='padding:15px;background:linear-gradient(90deg,#0a2a7a,#0a7a4a);color:white;width:100%;border:none'>GUARDAR NOTAS</button></form></body>"
+    h+=f"<br><button class='btn btn-primary' style='width:100%;padding:16px'>GUARDAR NOTAS EN BD</button></form></div>{STYLE}"
     return h
 
 @app.route('/pdf/<int:id>')
@@ -240,118 +332,90 @@ def pdf_hoja(id):
     cur.execute(adapt("SELECT * FROM notas WHERE alumno_id=?"),(id,)); nl=cur.fetchall(); conn.close()
     nm={(n['curso'],n['asignatura']):(n['ord'],n['extra']) for n in nl}
     buf=io.BytesIO(); c=canvas.Canvas(buf, pagesize=A4); w,h=A4
-    ROW_H=13.2; FONT_SIZE=7.5
+    ROW_H=12.8; FONT_SIZE=7.2
 
-    # === FONDO AZUL GRANADA + VERDE como pediste ===
-    c.setFillColor(colors.HexColor("#f5f3ef")); c.rect(0,0,w,h,fill=1,stroke=0)
-    # Cabecera azul granada
-    c.setFillColor(colors.HexColor("#0a2a7a")); c.rect(0,h-30,w,30,fill=1,stroke=0)
-    c.setFillColor(colors.HexColor("#0a7a4a")); c.rect(w*0.62,h-30,w*0.38,30,fill=1,stroke=0)
+    c.setFillColor(colors.HexColor("#f8f7f4")); c.rect(0,0,w,h,fill=1,stroke=0)
+    c.setFillColor(colors.HexColor("#0a2a7a")); c.rect(0,h-28,w,28,fill=1,stroke=0)
+    c.setFillColor(colors.HexColor("#0a7a4a")); c.rect(w*0.62,h-28,w*0.38,28,fill=1,stroke=0)
+    c.setFillColor(colors.white); c.setFont("Helvetica-Bold",6.2)
+    c.drawString(8, h-11, "REPÚBLICA DE GUINEA ECUATORIAL - MINISTERIO DE EDUCACIÓN, CIENCIA, ENSEÑANZA UNIVERSITARIA Y PROFESIONAL")
 
-    # === TEXTO REPUBLICA - que faltaba ===
-    c.setFillColor(colors.white); c.setFont("Helvetica-Bold",6.5)
-    c.drawString(8, h-12, "REPÚBLICA DE GUINEA ECUATORIAL")
-    c.drawString(8, h-20, "MINISTERIO DE EDUCACIÓN, CIENCIA, ENSEÑANZA UNIVERSITARIA Y PROFESIONAL")
-
-    # NOMBRE EN ROJO como pediste
     c.setFillColor(colors.HexColor("#c00000")); c.setFont("Helvetica-Bold",14)
-    c.drawString(12, h-48, f"{a['nombre']} {a['apellidos']}".upper())
+    c.drawString(12, h-46, f"{a['nombre']} {a['apellidos']}".upper())
+    c.setFillColor(colors.black); c.setFont("Helvetica-Bold",6.8)
+    c.drawString(12, h-58, f"NATURAL DE {a['natural_de']}, DEL DISTRITO DE {a['distrito']}, PROVINCIA DE {a['provincia']}".upper())
+    c.setFillColor(colors.HexColor("#c00000")); c.setFont("Helvetica-Bold",9.5)
+    c.drawString(12, h-72, f"IPES \"{a['centro_nombre'] or a['centro']} - {a['centro_localidad'] or 'BATA'}.")
+    c.setFillColor(colors.black); c.setFont("Helvetica-Bold",11); c.drawString(12, h-86, "HOJA ACADÉMICA")
+    c.setFont("Helvetica",7); c.drawString(12, h-98, f"AÑO ESCOLAR: {a['anio']}")
 
-    # NATURAL
-    c.setFillColor(colors.black); c.setFont("Helvetica-Bold",7)
-    c.drawString(12, h-60, f"NATURAL DE {a['natural_de']}, DEL DISRITO DE {a['distrito']}, PROVINCIA DE {a['provincia']}".upper())
-
-    # IPES EN ROJO como pediste
-    c.setFillColor(colors.HexColor("#c00000")); c.setFont("Helvetica-Bold",10)
-    c.drawString(12, h-74, f"IPES \"{a['centro_nombre'] or a['centro']} - {a['centro_localidad'] or 'BATA'}.".upper())
-
-    c.setFillColor(colors.black); c.setFont("Helvetica-Bold",11)
-    c.drawString(12, h-88, "HOJA ACADÉMICA")
-
-    c.setFont("Helvetica",7); c.drawString(12, h-100, f"AÑO ESCOLAR: {a['anio']}")
-
-    # Foto
-    xf=w-65; yf=h-95
-    c.setFillColor(colors.white); c.setStrokeColor(colors.black); c.setLineWidth(1.5)
-    c.rect(xf, yf, 52, 66, fill=1, stroke=1)
+    xf=w-65; yf=h-92
+    c.setFillColor(colors.white); c.setStrokeColor(colors.black); c.setLineWidth(1.2); c.rect(xf, yf, 52, 64, fill=1, stroke=1)
     c.setFont("Helvetica",7); c.drawCentredString(xf+26, yf+30, "FOTO")
     fp=os.path.join(UPLOAD_FOLDER, a['foto'] or '')
     if a['foto'] and os.path.exists(fp):
-        try: c.drawImage(ImageReader(fp), xf+1, yf+1, 50, 64, preserveAspectRatio=True)
+        try: c.drawImage(ImageReader(fp), xf+1, yf+1, 50, 62, preserveAspectRatio=True)
         except: pass
 
     def draw_block(x, y_top, bw, titulo, materias, is_roja):
-        GAP = 10
-        total_h = len(materias)*ROW_H + 13
-        # Etiqueta CURSO vertical (izquierda)
-        c.setFillColor(colors.HexColor("#c8c5b8")); c.rect(x, y_top-total_h, 16, total_h, fill=1, stroke=0)
-        c.saveState(); c.translate(x+8, y_top-total_h/2); c.rotate(90)
-        c.setFillColor(colors.black); c.setFont("Helvetica-Bold",6)
-        c.drawCentredString(0,0, "CURSO........." if "ESBA" in titulo or "BACH" in titulo else titulo[:10])
+        GAP = 9
+        total_h = len(materias)*ROW_H + 11
+        c.setFillColor(colors.HexColor("#d6d2c4")); c.rect(x, y_top-total_h, 14, total_h, fill=1, stroke=0)
+        c.saveState(); c.translate(x+7, y_top-total_h/2); c.rotate(90)
+        c.setFillColor(colors.black); c.setFont("Helvetica-Bold",5.5); c.drawCentredString(0,0, titulo if "ESBA" in titulo or "BACH" in titulo else "RAMA")
         c.restoreState()
-        # Título
         if is_roja:
-            c.setFillColor(colors.HexColor("#ffe0e0")); c.rect(x+16, y_top-11, bw-16, 11, fill=1, stroke=0)
-            c.setFillColor(colors.HexColor("#c00000")); c.setFont("Helvetica-Bold",5.5)
-            c.drawString(x+18, y_top-7.5, titulo)
-            y = y_top-11
+            c.setFillColor(colors.HexColor("#ffe4e6")); c.rect(x+14, y_top-10, bw-14, 10, fill=1, stroke=0)
+            c.setFillColor(colors.HexColor("#c00000")); c.setFont("Helvetica-Bold",5)
+            c.drawString(x+16, y_top-7, titulo)
+            y = y_top-10
         else:
-            c.setFillColor(colors.HexColor("#0a2a7a")); c.rect(x+16, y_top-11, bw-16, 11, fill=1, stroke=0)
-            c.setFillColor(colors.white); c.setFont("Helvetica-Bold",6)
-            c.drawString(x+18, y_top-7.5, titulo)
-            y = y_top-11
-
+            c.setFillColor(colors.HexColor("#0a2a7a")); c.rect(x+14, y_top-10, bw-14, 10, fill=1, stroke=0)
+            c.setFillColor(colors.white); c.setFont("Helvetica-Bold",5.5)
+            c.drawString(x+16, y_top-7, titulo)
+            y = y_top-10
         yy=y
         for mat in materias:
-            bx = x+16
-            bw_mat = bw-16-44
-            # fondo gris claro
+            bx = x+14; bw_mat = bw-14-44
             c.setFillColor(colors.HexColor("#f1f1f1")); c.rect(bx, yy-ROW_H, bw_mat, ROW_H, fill=1, stroke=0)
-            c.setStrokeColor(colors.black); c.setLineWidth(0.5)
+            c.setStrokeColor(colors.black); c.setLineWidth(0.4)
             c.rect(bx, yy-ROW_H, bw_mat, ROW_H, fill=0, stroke=1)
             c.rect(bx+bw_mat, yy-ROW_H, 22, ROW_H, fill=0, stroke=1)
             c.rect(bx+bw_mat+22, yy-ROW_H, 22, ROW_H, fill=0, stroke=1)
-            c.setFillColor(colors.black); c.setFont("Helvetica", FONT_SIZE-0.5)
-            c.drawString(bx+2, yy-ROW_H+3.5, mat[:36])
+            c.setFillColor(colors.black); c.setFont("Helvetica", FONT_SIZE-0.3); c.drawString(bx+2, yy-ROW_H+3.8, mat[:34])
             o,e = nm.get((titulo,mat),('',''))
-            c.setFont("Helvetica-Bold", FONT_SIZE)
-            c.drawCentredString(bx+bw_mat+11, yy-ROW_H+3.5, o)
-            c.drawCentredString(bx+bw_mat+33, yy-ROW_H+3.5, e)
+            c.setFont("Helvetica-Bold", FONT_SIZE); c.drawCentredString(bx+bw_mat+11, yy-ROW_H+3.8, o); c.drawCentredString(bx+bw_mat+33, yy-ROW_H+3.8, e)
             yy-=ROW_H
         return yy - GAP
 
-    x_left=8; bw_col=(w-24)/2
-    y_left=h-115
-    for tit,mats in [(BLOQUES_IZQ[0][0],BLOQUES_IZQ[0][1]), (BLOQUES_IZQ[1][0],BLOQUES_IZQ[1][1]), (BLOQUES_IZQ[2][0],BLOQUES_IZQ[2][1]), (BLOQUES_IZQ[3][0],BLOQUES_IZQ[3][1])]:
+    x_left=6; bw_col=(w-20)/2
+    y_left=h-112
+    for tit,mats in BLOQUES_IZQ:
         y_left=draw_block(x_left, y_left, bw_col, tit, mats, False)
-
-    x_right=w/2+4; y_right=h-115
+    x_right=w/2+2; y_right=h-112
     for tit,mats,is_roja in BLOQUES_DER:
         y_right=draw_block(x_right, y_right, bw_col, tit, mats, is_roja)
 
-    # LINEA FIRMA
-    linea_y = min(y_left, y_right) - 6
-    if linea_y < 85: linea_y = 85
-    c.setStrokeColor(colors.black); c.setLineWidth(0.8); c.line(8, linea_y, w-8, linea_y)
-    c.setFont("Helvetica-Bold",7); c.drawString(15, linea_y-12, "VB del Inspector de Educación")
-    c.drawString(w*0.55, linea_y-12, "El Director CEACGE")
+    gap_seguridad = 28
+    base_y = min(y_left, y_right) - gap_seguridad
+    if base_y < 70: base_y = 70
 
-    # === TEXTO SEGURIDAD QUE FALTABA ===
-    seguridad1 = "Cualquiera que intente falsificar o duplicar este documento academico, estara incurriendo en un delito de 'de falsificacion'."
-    seguridad2 = "Los antecedentes de esta Hoja Academica, estan registrados en una base de Datos Nacional de Guinea Ecuatorial."
-    c.setFillColor(colors.HexColor("#c00000")); c.setFont("Helvetica",6)
-    c.drawString(12, 52, seguridad1)
-    c.drawString(12, 44, seguridad2)
+    c.setFont("Helvetica-Bold",8); c.setFillColor(colors.black)
+    c.drawString(w/2-35, base_y, "El Director CEACGE")
+    c.setFont("Helvetica",6); c.drawString(w/2-20, base_y-10, "Firma y sello")
 
-    # QR y COD
+    c.setFillColor(colors.HexColor("#c00000")); c.setFont("Helvetica",5.8)
+    c.drawString(10, 38, "Cualquiera que intente falsificar o duplicar este documento academico, estara incurriendo en un delito de 'de falsificacion'.")
+    c.drawString(10, 30, "Los antecedentes de esta Hoja Academica, estan registrados en una base de Datos Nacional de Guinea Ecuatorial.")
+
     qr_text=f"CEACGE-{id:04d} | {a['nombre']} {a['apellidos']} | {a['centro_codigo']} | ceacge-final.onrender.com/pdf/{id}"
     qr_buf=gen_qr(qr_text)
-    c.drawImage(ImageReader(qr_buf), 8, 8, width=32, height=32)
-    c.setFillColor(colors.black); c.setFont("Helvetica-Bold",7)
-    c.drawString(w-90, 16, f"COD: CEA-{id:04d}-AA")
-    c.setFont("Helvetica",5.5); c.drawString(45, 18, f"Alumno: {a['contacto']} | {a['email']} | {a['anio']} | Verificar QR")
+    c.drawImage(ImageReader(qr_buf), 8, 6, width=28, height=28)
+    c.setFillColor(colors.black); c.setFont("Helvetica",5); c.drawString(42, 14, f"Alumno: {a['contacto']} | {a['email']} | {a['anio']} | Verificar QR  COD: CEA-{id:04d}-AA")
+    c.setFont("Helvetica-Bold",6.5); c.drawString(w-85, 10, f"COD: CEA-{id:04d}-AA")
+
     c.showPage(); c.save(); buf.seek(0)
-    r=make_response(buf.getvalue()); r.headers['Content-Type']='application/pdf'; r.headers['Content-Disposition']=f'inline; filename=HOJA_OFICIAL_{id}.pdf'; return r
+    r=make_response(buf.getvalue()); r.headers['Content-Type']='application/pdf'; r.headers['Content-Disposition']=f'inline; filename=HOJA_V18_{id}.pdf'; return r
 
 try: init_db()
 except Exception as e: print(e)
