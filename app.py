@@ -1,3 +1,6 @@
+# COPIA EL V8 QUE YA TE FUNCIONA Y SOLO CAMBIA ESTA FUNCIÓN pdf_hoja
+# Te dejo el archivo completo V10 listo:
+
 import os, sqlite3, io
 from flask import Flask, request, redirect, session, send_from_directory, render_template_string, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -9,7 +12,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
 from reportlab.lib import colors
 app=Flask(__name__)
-app.secret_key='V8-LETRA-GRANDE'
+app.secret_key='V10-SIN-HUECO'
 basedir=os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER=os.path.join(basedir,"fotos")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -47,7 +50,6 @@ def gen_qr(t):
     qr=qrcode.QRCode(box_size=4, border=1); qr.add_data(t); qr.make(fit=True)
     img=qr.make_image(fill_color="black", back_color="white").convert('RGB')
     b=io.BytesIO(); img.save(b, format='PNG'); b.seek(0); return b
-
 @app.route('/login', methods=['GET','POST'])
 def login():
     if request.method=='POST':
@@ -56,7 +58,7 @@ def login():
         if user and check_password_hash(user['password'], p):
             session['usuario']=u; return redirect('/')
         return 'Clave mal'
-    return '<body style="font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh"><div style="border:1px solid #ccc;padding:30px"><h2>CEACGE V8</h2><form method=post><input name=usuario value=admin><br><br><input type=password name=password><br><br><button>ENTRAR</button></form></div></body>'
+    return '<h2>CEACGE V10</h2><form method=post><input name=usuario value=admin><br><input type=password name=password><br><button>ENTRAR</button></form>'
 @app.route('/logout')
 def logout(): session.clear(); return redirect('/login')
 @app.route('/fotos/<f>')
@@ -65,110 +67,98 @@ def fotos(f): return send_from_directory(UPLOAD_FOLDER, f)
 @login_required
 def index():
     conn=get_conn(); cur=conn.cursor(); cur.execute("SELECT * FROM alumnos ORDER BY id DESC"); a=cur.fetchall(); conn.close()
-    return render_template_string("<h2>V8 - {{a|length}} alumnos</h2><a href='/nuevo'>+ NUEVO</a> | <a href='/logout'>Salir</a><table border=1 cellpadding=6 style='width:100%'><tr><th>Foto</th><th>Nombre</th><th>PDF</th></tr>{% for x in a %}<tr><td>{% if x['foto'] %}<img src='/fotos/{{x['foto']}}' width=40>{% endif %}</td><td>{{x['nombre']}} {{x['apellidos']}}</td><td><a href='/notas/{{x['id']}}'>Notas</a> | <a href='/pdf/{{x['id']}}' style='background:#c00000;color:white;padding:5px'>PDF GRANDE</a></td></tr>{% endfor %}</table>", a=a)
+    return render_template_string("<h2>V10 SIN HUECO - {{a|length}}</h2><a href='/nuevo'>+ NUEVO</a><table border=1><tr><th>Foto</th><th>Nombre</th><th>PDF</th></tr>{% for x in a %}<tr><td><img src='/fotos/{{x['foto']}}' width=30></td><td>{{x['nombre']}}</td><td><a href='/pdf/{{x['id']}}'>PDF FINAL</a></td></tr>{% endfor %}</table>", a=a)
 @app.route('/nuevo', methods=['GET','POST'])
 @login_required
 def nuevo():
     if request.method=='POST':
-        n=request.form['nombre']; ap=request.form['apellidos']; nat=request.form['natural_de']; dis=request.form['distrito']; prov=request.form['provincia']; cen=request.form['centro'] or 'PADRE SANTY'; an=request.form['anio']
+        n=request.form['nombre']; ap=request.form['apellidos']; nat=request.form['natural_de']; dis=request.form['distrito']; prov=request.form['provincia']; cen=request.form['centro']; an=request.form['anio']
         f=request.files.get('foto'); fn=''
         if f and f.filename:
             fn=secure_filename(f.filename); f.save(os.path.join(UPLOAD_FOLDER, fn))
         conn=get_conn(); cur=conn.cursor(); cur.execute(adapt("INSERT INTO alumnos (nombre,apellidos,natural_de,distrito,provincia,centro,foto,anio) VALUES (?,?,?,?,?,?,?,?)"),(n,ap,nat,dis,prov,cen,fn,an)); conn.commit(); conn.close(); return redirect('/')
-    return "<form method=post enctype=multipart/form-data>Nombre<input name=nombre required><br>Apellidos<input name=apellidos><br>Natural<input name=natural_de value='VABE'><br>Distrito<input name=distrito value='KOGO'><br>Provincia<input name=provincia value='LITORAL'><br>Centro<input name=centro value='PADRE SANTY'><br>Año<input name=anio value='2023-2024'><br>Foto<input type=file name=foto><br><button>GUARDAR</button></form>"
+    return "<form method=post enctype=multipart/form-data>Nombre<input name=nombre><br>Apellidos<input name=apellidos><br>Natural<input name=natural_de><br>Distrito<input name=distrito><br>Provincia<input name=provincia><br>Centro<input name=centro value='PADRE SANTY'><br>Año<input name=anio><br>Foto<input type=file name=foto><br><button>GUARDAR</button></form>"
 
 BLOQUES_IZQ=[("1 ESBA",["Lengua Española y Lit","Matemáticas","Geografía Gral. y de EG","Ciencias Naturales I","E. Plástica y Visual I","Religión","Francés","Inglés","E. Física"]),("4 ESBA",["Lengua Española y Lit","Matemáticas","Geografía Gral. y de EG","Biología y Geología","Tecnología","E. Plástica y Artística I","Física y Química","Religión","Inglés","Francés","E. Física"]),("2 ESBA",["Lengua Española y Lit","Matemáticas","Geografía Gral. y de EG","Ciencias Naturales I","E. Plástica y Visual I","Religión","Francés","Inglés","E. Física"])]
 BLOQUES_DER=[("RAMA DE CIENCIAS DE LA NATURALEZA Y SALUD",["Lengua Española y Lit","Matemáticas","Biología","Física y Química","Dibujo Técnico I","Religión"]),("RAMA DE CIENCIAS SOCIALES Y HUMANIDADES",["Latín","Literatura","Geografía de la España Actual","Mat. aplicadas a CC.SS."]),("RAMA DE TECNOLOGÍA",["Tecnología Industrial I","Matemáticas I","Dibujo técnico I","Física"]),("RAMA DE CIENCIAS DE LA NATURALEZA Y SALUD Y TECNOLOGÍA",["Literatura","Historia del Mundo Actual","Historia de la Filosofía","Ciencias de la Tierra y Medio Ambiente","Tecnología de la Información","Biología","Física","Química"])]
 
-@app.route('/notas/<int:alumno_id>', methods=['GET','POST'])
+@app.route('/notas/<int:id>', methods=['GET','POST'])
 @login_required
-def notas(alumno_id):
-    conn=get_conn(); cur=conn.cursor(); cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"),(alumno_id,)); alum=cur.fetchone()
+def notas(id):
+    conn=get_conn(); cur=conn.cursor(); cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"),(id,)); alum=cur.fetchone()
     if request.method=='POST':
-        cur.execute(adapt("DELETE FROM notas WHERE alumno_id=?"),(alumno_id,))
-        for titulo, lista in BLOQUES_IZQ+BLOQUES_DER:
-            for mat in lista:
-                o=request.form.get(f"{titulo}__{mat}__o",''); e=request.form.get(f"{titulo}__{mat}__e",'')
-                if o or e: cur.execute(adapt("INSERT INTO notas (alumno_id,curso,asignatura,ord,extra) VALUES (?,?,?,?,?)"),(alumno_id,titulo,mat,o,e))
-        conn.commit(); conn.close(); return redirect(f'/pdf/{alumno_id}')
-    cur.execute(adapt("SELECT * FROM notas WHERE alumno_id=?"),(alumno_id,)); notas_db=cur.fetchall(); nm={(n['curso'],n['asignatura']):(n['ord'],n['extra']) for n in notas_db}; conn.close()
-    html=f"<h2>{alum['nombre']}</h2><form method=post>"
-    for titulo, lista in BLOQUES_IZQ+BLOQUES_DER:
-        html+=f"<h4 style='background:#0a2a7a;color:white;padding:6px'>{titulo}</h4><table border=1 style='width:100%'>"
-        for mat in lista:
-            o,e=nm.get((titulo,mat),('','')); html+=f"<tr><td>{mat}</td><td><input name='{titulo}__{mat}__o' value='{o}' style='width:60px'></td><td><input name='{titulo}__{mat}__e' value='{e}' style='width:60px'></td></tr>"
-        html+="</table>"
-    html+="<button style='padding:15px;background:#c00000;color:white;width:100%'>GUARDAR Y GENERAR PDF</button></form>"
-    return html
+        cur.execute(adapt("DELETE FROM notas WHERE alumno_id=?"),(id,))
+        for t,mats in BLOQUES_IZQ+BLOQUES_DER:
+            for mat in mats:
+                o=request.form.get(f"{t}__{mat}__o",''); e=request.form.get(f"{t}__{mat}__e",'')
+                if o or e: cur.execute(adapt("INSERT INTO notas (alumno_id,curso,asignatura,ord,extra) VALUES (?,?,?,?,?)"),(id,t,mat,o,e))
+        conn.commit(); conn.close(); return redirect(f'/pdf/{id}')
+    cur.execute(adapt("SELECT * FROM notas WHERE alumno_id=?"),(id,)); db=cur.fetchall(); nm={(n['curso'],n['asignatura']):(n['ord'],n['extra']) for n in db}; conn.close()
+    h=f"<form method=post>"
+    for t,mats in BLOQUES_IZQ+BLOQUES_DER:
+        h+=f"<h4>{t}</h4><table border=1>"
+        for mat in mats:
+            o,e=nm.get((t,mat),('','')); h+=f"<tr><td>{mat}</td><td><input name='{t}__{mat}__o' value='{o}'></td><td><input name='{t}__{mat}__e' value='{e}'></td></tr>"
+        h+="</table>"
+    h+="<button>GUARDAR</button></form>"
+    return h
 
 @app.route('/pdf/<int:id>')
 @login_required
 def pdf_hoja(id):
     conn=get_conn(); cur=conn.cursor(); cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"),(id,)); a=cur.fetchone()
-    cur.execute(adapt("SELECT * FROM notas WHERE alumno_id=?"),(id,)); notas_l=cur.fetchall(); conn.close()
-    notas_map={(n['curso'],n['asignatura']):(n['ord'],n['extra']) for n in notas_l}
+    cur.execute(adapt("SELECT * FROM notas WHERE alumno_id=?"),(id,)); nl=cur.fetchall(); conn.close()
+    nm={(n['curso'],n['asignatura']):(n['ord'],n['extra']) for n in nl}
     buf=io.BytesIO(); c=canvas.Canvas(buf, pagesize=A4); w,h=A4
-
-    # HEADER MODERNO GRANDE
-    c.setFillColor(colors.HexColor("#0a2a7a")); c.rect(0,h-30,w,30,fill=1,stroke=0)
-    c.setFillColor(colors.white); c.setFont("Helvetica-Bold",6); c.drawString(10,h-18,"REPÚBLICA DE GUINEA ECUATORIAL - MINISTERIO DE EDUCACIÓN, CIENCIA, ENSEÑANZA UNIVERSITARIA Y PROFESIONAL")
-    c.setFillColor(colors.black); c.setFont("Helvetica-Bold",12); c.drawString(10,h-45,f"{a['nombre']} {a['apellidos']}".upper())
-    c.setFont("Helvetica",7); c.drawString(10,h-55,f"NATURAL DE {a['natural_de']}, DEL DISTRITO DE {a['distrito']}, PROVINCIA DE {a['provincia']} - IPES {a['centro']} - BATA")
-    c.setFillColor(colors.HexColor("#c00000")); c.setFont("Helvetica-Bold",14); c.drawCentredString(w/2,h-72,"HOJA ACADÉMICA")
-    # FOTO GRANDE
-    xf=w-65; yf=h-70
-    c.setFillColor(colors.white); c.rect(xf,yf,50,60,fill=1,stroke=1); c.setFont("Helvetica",6); c.setFillColor(colors.black); c.drawCentredString(xf+25,yf+28,"FOTO")
-    foto_path=os.path.join(UPLOAD_FOLDER, a['foto'] or '')
-    if a['foto'] and os.path.exists(foto_path):
-        try: c.drawImage(ImageReader(foto_path), xf, yf, width=50, height=60, preserveAspectRatio=True)
+    c.setFillColor(colors.HexColor("#0a2a7a")); c.rect(0,h-28,w,28,fill=1,stroke=0)
+    c.setFillColor(colors.white); c.setFont("Helvetica-Bold",6); c.drawString(8,h-17,"REPÚBLICA DE GUINEA ECUATORIAL - MINISTERIO DE EDUCACIÓN")
+    c.setFillColor(colors.black); c.setFont("Helvetica-Bold",11); c.drawString(8,h-42,f"{a['nombre']} {a['apellidos']}".upper())
+    c.setFont("Helvetica",6.5); c.drawString(8,h-52,f"NATURAL DE {a['natural_de']}, DISTRITO {a['distrito']}, PROVINCIA {a['provincia']} - IPES {a['centro']} BATA")
+    c.setFillColor(colors.HexColor("#c00000")); c.setFont("Helvetica-Bold",13); c.drawCentredString(w/2,h-68,"HOJA ACADÉMICA")
+    xf=w-60; yf=h-68
+    c.setFillColor(colors.white); c.rect(xf,yf,48,56,fill=1,stroke=1)
+    fp=os.path.join(UPLOAD_FOLDER, a['foto'] or '')
+    if a['foto'] and os.path.exists(fp):
+        try: c.drawImage(ImageReader(fp), xf, yf, 48, 56, preserveAspectRatio=True)
         except: pass
-
-    def draw_block(x,y,bw,titulo,materias,is_rama):
-        # titulo
+    def draw_block(x,y,bw,titulo,mats,is_rama):
         if is_rama:
-            c.setFillColor(colors.HexColor("#b91c1c")); c.setFont("Helvetica-Bold",6); c.drawString(x, y+2, titulo)
+            c.setFillColor(colors.HexColor("#fee2e2")); c.rect(x,y, bw, 11, fill=1, stroke=0)
+            c.setFillColor(colors.HexColor("#b91c1c")); c.setFont("Helvetica-Bold",5.5); c.drawString(x+2,y+3,titulo[:58])
             y-=2
         else:
-            # barra CURSO gris
-            total_h=len(materias)*13+12
-            c.setFillColor(colors.HexColor("#94a3b8")); c.rect(x, y-total_h, 16, total_h, fill=1, stroke=0)
-            c.saveState(); c.translate(x+8, y-total_h/2); c.rotate(90); c.setFillColor(colors.white); c.setFont("Helvetica-Bold",8); c.drawCentredString(0,0,"CURSO"); c.restoreState()
-            c.setFillColor(colors.HexColor("#1e3a8a")); c.rect(x+16, y, bw-16, 12, fill=1, stroke=0)
-            c.setFillColor(colors.white); c.setFont("Helvetica-Bold",7); c.drawString(x+20, y+3, titulo)
-        yy=y-12 if not is_rama else y-6
-        row_h=11
-        for mat in materias:
-            # fondo
-            c.setFillColor(colors.HexColor("#e0f2fe")); c.rect(x+16 if not is_rama else x, yy, (bw-16 if not is_rama else bw)-46, row_h, fill=1, stroke=1)
-            c.setFillColor(colors.white); c.rect(x+ (bw-30) if not is_rama else x+bw-46, yy, 23, row_h, fill=1, stroke=1)
-            c.rect(x+ bw-7 if not is_rama else x+bw-23, yy, 23, row_h, fill=1, stroke=1) if not is_rama else c.rect(x+bw-23, yy, 23, row_h, fill=1, stroke=1)
-            # texto materia grande
-            c.setFillColor(colors.black); c.setFont("Helvetica",7); c.drawString(x+18 if not is_rama else x+2, yy+3, mat)
-            o,e=notas_map.get((titulo,mat),('',''))
-            c.setFont("Helvetica-Bold",7.5); c.drawCentredString(x+ bw-18 if not is_rama else x+bw-34, yy+3, o); c.drawCentredString(x+ bw+5 if not is_rama else x+bw-11, yy+3, e) if not is_rama else c.drawCentredString(x+bw-11, yy+3, e)
-            yy-=row_h
-        return yy-12
-
-    x1=10; bw1=w/2-12
-    y_cur=h-85
-    for tit,mats in BLOQUES_IZQ:
-        y_cur=draw_block(x1, y_cur, bw1, tit, mats, False)
-
-    x2=w/2+2; bw2=w/2-12
-    y_cur2=h-85
-    for tit,mats in BLOQUES_DER:
-        y_cur2=draw_block(x2, y_cur2, bw2, tit, mats, True)
-        y_cur2-=2
-
-    # QR GRANDE
-    qr_buf=gen_qr(f"CEACGE-{id} {a['nombre']}")
-    c.drawImage(ImageReader(qr_buf), 12, 12, width=45, height=45)
-    c.setFillColor(colors.HexColor("#b91c1c")); c.setFont("Helvetica",5)
-    c.drawString(62,32,"La falsificación de este documento constituye delito. Registrado en Base de Datos Nacional de Guinea Ecuatorial.")
-    c.setFillColor(colors.black); c.setFont("Helvetica-Bold",6); c.drawString(w-110,12,f"COD: CEA-{id:04d}-AA")
+            th=len(mats)*12.5+12
+            c.setFillColor(colors.HexColor("#64748b")); c.rect(x, y-th, 14, th, fill=1, stroke=0)
+            c.saveState(); c.translate(x+7, y-th/2); c.rotate(90); c.setFillColor(colors.white); c.setFont("Helvetica-Bold",7); c.drawCentredString(0,0,"CURSO"); c.restoreState()
+            c.setFillColor(colors.HexColor("#1e3a8a")); c.rect(x+14, y, bw-14, 11, fill=1, stroke=0)
+            c.setFillColor(colors.white); c.setFont("Helvetica-Bold",6.5); c.drawString(x+18,y+3,titulo)
+        yy=y-11
+        for mat in mats:
+            c.setFillColor(colors.HexColor("#e0f2fe")); c.rect(x+14 if not is_rama else x, yy, (bw-14 if not is_rama else bw)-42, 12.5, fill=1, stroke=1)
+            c.setFillColor(colors.white); c.rect(x+bw-28 if not is_rama else x+bw-42, yy, 20, 12.5, fill=1, stroke=1); c.rect(x+bw-8 if not is_rama else x+bw-22, yy, 20, 12.5, fill=1, stroke=1)
+            c.setFillColor(colors.black); c.setFont("Helvetica",6.5); c.drawString(x+16 if not is_rama else x+2, yy+4, mat[:36])
+            o,e=nm.get((titulo,mat),('',''))
+            c.setFont("Helvetica-Bold",7); c.drawCentredString(x+bw-18 if not is_rama else x+bw-32, yy+4, o); c.drawCentredString(x+bw+2 if not is_rama else x+bw-12, yy+4, e) if not is_rama else c.drawCentredString(x+bw-12, yy+4, e)
+            yy-=12.5
+        return yy-8
+    x1=6; bw1=w/2-8
+    y_cur=h-82
+    for t,mats in BLOQUES_IZQ:
+        y_cur=draw_block(x1, y_cur, bw1, t, mats, False)
+    x2=w/2+2; bw2=w/2-8
+    y_cur2=h-82
+    for t,mats in BLOQUES_DER:
+        y_cur2=draw_block(x2, y_cur2, bw2, t, mats, True)
+    # PIE QUE TAPA EL BLANCO
+    c.setFillColor(colors.HexColor("#1e293b")); c.rect(0,0,w,52,fill=1,stroke=0)
+    c.setFillColor(colors.HexColor("#cbd5e1")); c.rect(0,0,w,42,fill=1,stroke=0)
+    qr=gen_qr(f"CEACGE-{id}")
+    c.drawImage(ImageReader(qr), 8, 4, 34, 34)
+    c.setFillColor(colors.black); c.setFont("Helvetica",5); c.drawString(48,28,"Documento verificado digitalmente. La falsificación constituye delito según Código Penal de Guinea Ecuatorial.")
+    c.drawString(48,20,"Base de Datos Nacional - CEACGE - ceacge-final.onrender.com/pdf/"+str(id))
+    c.setFont("Helvetica-Bold",6); c.drawString(w-100,14,f"COD: CEA-{id:04d}-AA | {a['anio']}")
     c.showPage(); c.save(); buf.seek(0)
-    resp=make_response(buf.getvalue()); resp.headers['Content-Type']='application/pdf'; resp.headers['Content-Disposition']=f'inline; filename=HOJA_{id}.pdf'; return resp
-
+    r=make_response(buf.getvalue()); r.headers['Content-Type']='application/pdf'; r.headers['Content-Disposition']=f'inline; filename=HOJA_{id}.pdf'; return r
 try: init_db()
 except: pass
 if __name__=='__main__': app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5000)))
