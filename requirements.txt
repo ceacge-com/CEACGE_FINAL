@@ -1,7 +1,9 @@
-Flask
-Werkzeug
-psycopg2-binary
-Pillow
-qrcode[pil]
-reportlab
-gunicorn
+Flask==2.3.3
+Flask-SQLAlchemy==3.1.1
+Werkzeug==2.3.7
+SQLAlchemy==2.0.23
+qrcode[pil]==7.4.2
+Pillow==10.1.0
+reportlab==4.0.7
+psycopg2-binary==2.9.9
+gunicorn==21.2.0
