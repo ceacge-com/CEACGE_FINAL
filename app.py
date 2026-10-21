@@ -70,7 +70,7 @@ th{background:#0a1931;color:white;padding:8px}td{padding:7px;border-bottom:1px s
 .ver{background:#17a2b8}.pdf{background:#dc3545}.notas{background:#6f42c1}
 .foto{width:32px;height:42px;object-fit:cover;border-radius:3px;border:1px solid #ccc}
 </style></head><body>
-<div class="header"><h2 style="margin:0">CEACGE V20.2 - PRIMARIA | SECUNDARIA | BACH | ESBA - LIVE</h2><small>{{session.username}} ({{session.rol}}) - {{centro_nombre}} <span class="badge">V20.2</span></small><br><a href="/logout" style="color:#ffc107">Salir</a></div>
+<div class="header"><h2 style="margin:0">CEACGE V20.2 - PRIMARIA | SECUNDARIA | BACH | ESBA - LIVE</h2><small>{{session.username}} ({{session.rol}}) - {{centro_nombre}} <span class="badge">V20.2.1 FIX</span></small><br><a href="/logout" style="color:#ffc107">Salir</a></div>
 <div class="stats"><div class="stat"><h3>{{total_central}}</h3><p>Total Central</p></div><div class="stat"><h3>{{total_mis}}</h3><p>Mis Alumnos</p></div></div>
 <div class="btns">
 <a class="btn btn-blue" href="/">Mis Alumnos</a>
@@ -187,7 +187,7 @@ def generar_pdf(alumno, notas):
     c.setFillColor(verde); c.rect(0, h-92, w, 8, fill=1, stroke=0)
     c.setFillColor(HexColor("#FFFFFF")); c.setFont("Helvetica-Bold", 11); c.drawCentredString(w/2, h-25, "REPUBLICA DE GUINEA ECUATORIAL")
     c.setFont("Helvetica", 9); c.drawCentredString(w/2, h-38, "MINISTERIO DE EDUCACION")
-    c.setFont("Helvetica-Bold", 12); c.drawCentredString(w/2, h-58, "CEACGE - V20.2")
+    c.setFont("Helvetica-Bold", 12); c.drawCentredString(w/2, h-58, "CEACGE - V20.2.1 FIX")
     c.setFont("Helvetica-Bold", 10); c.drawCentredString(w/2, h-75, f"{alumno['nivel']} - {alumno['anio_academico'] or ''}")
     y=h-120
     if alumno['foto_base64']:
@@ -229,8 +229,9 @@ def nuevo():
         foto=request.form.get('foto_b64','')
         if len(foto)>2000000: foto=''
         conn=get_db(); cur=conn.cursor()
-      cur.execute("INSERT INTO alumnos (nombre,apellidos,codigo_alumno,ipes,nivel,fecha_nacimiento,lugar_nacimiento,distrito,provincia,centro_actual,anio_academico,centro_id,foto_base64) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
-(request.form['nombre'], request.form['apellidos'], request.form['codigo_alumno'], request.form['ipes'], request.form['nivel'], request.form.get('fecha_nacimiento') or None, request.form.get('lugar_nacimiento'), request.form.get('distrito'), request.form.get('provincia'), request.form.get('centro_actual'), request.form.get('anio_academico'), session['centro_id'], foto))
+        # FIX 13 COLUMNAS = 13 %s
+        cur.execute("INSERT INTO alumnos (nombre,apellidos,codigo_alumno,ipes,nivel,fecha_nacimiento,lugar_nacimiento,distrito,provincia,centro_actual,anio_academico,centro_id,foto_base64) VALUES (%s,%s,%s,%s,%s) RETURNING id",
+        (request.form['nombre'], request.form['apellidos'], request.form['codigo_alumno'], request.form['ipes'], request.form['nivel'], request.form.get('fecha_nacimiento') or None, request.form.get('lugar_nacimiento'), request.form.get('distrito'), request.form.get('provincia'), request.form.get('centro_actual'), request.form.get('anio_academico'), session['centro_id'], foto))
         nid=cur.fetchone()[0]; conn.commit(); cur.close(); conn.close()
         return redirect(f'/ver/{nid}')
     return render_template_string(NUEVO_HTML, centro_nombre=centro_nombre)
@@ -263,7 +264,7 @@ def centros():
         try: cur.execute("INSERT INTO centros (nombre,codigo) VALUES (%s,%s)", (request.form['nombre'].strip(), request.form['codigo'].strip())); conn.commit()
         except: conn.rollback()
     cur.execute("SELECT * FROM centros ORDER BY id"); lst=cur.fetchall(); cur.close(); conn.close()
-    html='<body style="font-family:Arial;padding:15px;background:#f4f6f9"><h2>Centros V20.2</h2><form method="post" style="background:white;padding:15px;border-radius:10px;max-width:500px"><input name="nombre" placeholder="Nombre Centro" required style="width:100%;padding:10px;margin:5px 0"><input name="codigo" placeholder="Codigo" required style="width:100%;padding:10px;margin:5px 0"><button style="padding:10px 20px;background:#0a1931;color:white;border:none;border-radius:6px">Crear Centro</button></form><br><table border=1 cellpadding=8 style="background:white"><tr><th>ID</th><th>Nombre</th><th>Codigo</th></tr>'
+    html='<body style="font-family:Arial;padding:15px;background:#f4f6f9"><h2>Centros V20.2.1 FIX</h2><form method="post" style="background:white;padding:15px;border-radius:10px;max-width:500px"><input name="nombre" placeholder="Nombre Centro" required style="width:100%;padding:10px;margin:5px 0"><input name="codigo" placeholder="Codigo" required style="width:100%;padding:10px;margin:5px 0"><button style="padding:10px 20px;background:#0a1931;color:white;border:none;border-radius:6px">Crear Centro</button></form><br><table border=1 cellpadding=8 style="background:white"><tr><th>ID</th><th>Nombre</th><th>Codigo</th></tr>'
     for c in lst: html+=f"<tr><td>{c['id']}</td><td>{c['nombre']}</td><td>{c['codigo']}</td></tr>"
     html+="</table><br><a href='/'>Volver</a></body>"
     return html
@@ -293,7 +294,7 @@ def usuarios():
     cur.execute("SELECT * FROM centros ORDER BY nombre"); centros_list=cur.fetchall()
     cur.execute("SELECT u.*, c.nombre as centro_nombre FROM usuarios u LEFT JOIN centros c ON u.centro_id=c.id ORDER BY u.id DESC"); users=cur.fetchall()
     cur.close(); conn.close()
-    html=f"<body style='font-family:Arial;padding:15px;background:#f4f6f9'><h2>Usuarios - Nombre del centro + Usuario + Contraseña > Generar - V20.2</h2>{msg}<form method='post' style='background:white;padding:15px;border-radius:12px;max-width:550px'><label>Nombre del Centro *</label><input name='centro_nombre' required style='width:100%;padding:10px;margin:5px 0'><label>Usuario *</label><input name='username' required style='width:100%;padding:10px;margin:5px 0'><label>Contraseña *</label><input name='password' required style='width:100%;padding:10px;margin:5px 0'><label>Rol</label><select name='rol' style='width:100%;padding:10px'><option value='centro'>centro</option><option value='admin'>admin</option></select><button style='width:100%;padding:12px;background:#28a745;color:white;border:none;border-radius:8px;font-weight:bold;margin-top:10px'>GENERAR CENTRO + USUARIO</button></form><br><table border=1 cellpadding=8 style='background:white;border-collapse:collapse'><tr style='background:#0a1931;color:white'><th>Usuario</th><th>Centro</th></tr>"
+    html=f"<body style='font-family:Arial;padding:15px;background:#f4f6f9'><h2>Usuarios - Nombre del centro + Usuario + Contraseña > Generar - V20.2.1 FIX</h2>{msg}<form method='post' style='background:white;padding:15px;border-radius:12px;max-width:550px'><label>Nombre del Centro *</label><input name='centro_nombre' required style='width:100%;padding:10px;margin:5px 0'><label>Usuario *</label><input name='username' required style='width:100%;padding:10px;margin:5px 0'><label>Contraseña *</label><input name='password' required style='width:100%;padding:10px;margin:5px 0'><label>Rol</label><select name='rol' style='width:100%;padding:10px'><option value='centro'>centro</option><option value='admin'>admin</option></select><button style='width:100%;padding:12px;background:#28a745;color:white;border:none;border-radius:8px;font-weight:bold;margin-top:10px'>GENERAR CENTRO + USUARIO</button></form><br><table border=1 cellpadding=8 style='background:white;border-collapse:collapse'><tr style='background:#0a1931;color:white'><th>Usuario</th><th>Centro</th></tr>"
     for u in users: html+=f"<tr><td>{u['username']}</td><td>{u['centro_nombre']}</td></tr>"
     html+="</table><br><a href='/'>Volver</a></body>"
     return html
