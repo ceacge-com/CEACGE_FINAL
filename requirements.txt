@@ -1,7 +1,6 @@
 Flask
 psycopg2-binary
 qrcode
-Pillow
 reportlab
+Pillow
 Werkzeug
-gunicorn
