@@ -1,276 +1,335 @@
-# CEACGE V19.1 FINAL - TODO FUSIONADO
-# V18 ORIGINAL + BUSCAR CENTRAL + HTTPS + USUARIOS MANUALES ASIGNADOS POR LA CENTRAL
-# Mantiene: PDF limpio sin linea, Solo Director, Seguridad separado, VER elegante
-
-import os, base64, qrcode
-from io import BytesIO
-from datetime import datetime
-from flask import Flask, render_template_string, request, redirect, url_for, flash, session, make_response, abort
-from flask_sqlalchemy import SQLAlchemy
+import os
+from flask import Flask, render_template_string, request, redirect, url_for, session, send_file, flash
 from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps
+import psycopg2
+import psycopg2.extras
+from datetime import datetime
+import qrcode
+from io import BytesIO
+import base64
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.colors import HexColor
+from reportlab.lib.utils import ImageReader
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "ceacge-v19-1-manual-2026")
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:///ceacge_v19_1.db")
-if app.config['SQLALCHEMY_DATABASE_URI'].startswith("postgres://"):
-    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace("postgres://", "postgresql://", 1)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+app.secret_key = os.environ.get('SECRET_KEY', 'ceacge2025-secret-v20')
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-# FORZAR HTTPS - quita advertencia "No seguro" en Render
-@app.before_request
-def force_https():
-    if request.headers.get('X-Forwarded-Proto', 'http') == 'http':
-        if 'onrender.com' in request.host:
-            return redirect(request.url.replace('http://', 'https://', 1), code=301)
+def get_db():
+    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+    return conn
 
-# ---------------- MODELOS ----------------
-class Ipe(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    codigo = db.Column(db.String(50), unique=True, nullable=False)
-    nombre = db.Column(db.String(200), nullable=False)
-    director = db.Column(db.String(200))
+def init_db():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS centros (
+        id SERIAL PRIMARY KEY,
+        nombre VARCHAR(200) UNIQUE NOT NULL,
+        codigo VARCHAR(50),
+        created_at TIMESTAMP DEFAULT NOW()
+    );
+    """)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        password_hash VARCHAR(300) NOT NULL,
+        rol VARCHAR(20) DEFAULT 'centro',
+        centro_id INTEGER REFERENCES centros(id),
+        created_at TIMESTAMP DEFAULT NOW()
+    );
+    """)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS alumnos (
+        id SERIAL PRIMARY KEY,
+        nombre VARCHAR(200) NOT NULL,
+        apellidos VARCHAR(200),
+        ipes VARCHAR(100),
+        fecha_nacimiento DATE,
+        nivel VARCHAR(100),
+        centro_id INTEGER REFERENCES centros(id),
+        foto_path VARCHAR(300),
+        created_at TIMESTAMP DEFAULT NOW()
+    );
+    """)
+    cur.execute("SELECT id FROM centros WHERE nombre='CEACGE CENTRAL'")
+    if not cur.fetchone():
+        cur.execute("INSERT INTO centros (nombre,codigo) VALUES ('CEACGE CENTRAL','CENTRAL') RETURNING id")
+        central_id = cur.fetchone()[0]
+    else:
+        cur.execute("SELECT id FROM centros WHERE nombre='CEACGE CENTRAL'")
+        central_id = cur.fetchone()[0]
+    cur.execute("SELECT id FROM usuarios WHERE username='admin'")
+    if not cur.fetchone():
+        cur.execute("INSERT INTO usuarios (username,password_hash,rol,centro_id) VALUES (%s,%s,%s,%s)",
+                    ('admin', generate_password_hash('ceacge2025'), 'admin', central_id))
+    conn.commit()
+    cur.close()
+    conn.close()
 
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
-    role = db.Column(db.String(20), default='centro')
-    ipe_id = db.Column(db.Integer, db.ForeignKey('ipe.id'), nullable=True)
-    ipe = db.relationship('Ipe')
-
-class Alumno(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100), nullable=False)
-    apellidos = db.Column(db.String(100), nullable=False)
-    fecha_nacimiento = db.Column(db.String(30))
-    lugar_nacimiento = db.Column(db.String(100))
-    especialidad = db.Column(db.String(100))
-    matricula = db.Column(db.String(50), unique=True)
-    telefono = db.Column(db.String(50))
-    foto = db.Column(db.Text)
-    ipe_id = db.Column(db.Integer, db.ForeignKey('ipe.id'))
-    ipe = db.relationship('Ipe')
-    fecha_registro = db.Column(db.DateTime, default=datetime.utcnow)
-
-with app.app_context():
-    db.create_all()
-    if not Ipe.query.first():
-        db.session.add(Ipe(codigo='CEACGE-CENTRAL', nombre='CEACGE Central - Bata', director='Director General'))
-        db.session.add(Ipe(codigo='IPES-007', nombre='IPES PADRE SANTY', director='Director'))
-        db.session.commit()
-    if not User.query.filter_by(username='admin').first():
-        ipe = Ipe.query.first()
-        db.session.add(User(username='admin', password=generate_password_hash('admin123'), role='admin', ipe_id=ipe.id))
-        db.session.commit()
+try:
+    if DATABASE_URL:
+        init_db()
+except Exception as e:
+    print(f"Init DB error: {e}")
 
 def login_required(f):
+    from functools import wraps
     @wraps(f)
-    def dec(*a,**kw):
-        if 'user_id' not in session: return redirect(url_for('login'))
-        return f(*a,**kw)
-    return dec
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
 
-def get_user():
-    if 'user_id' in session: return User.query.get(session['user_id'])
-    return None
+LOGIN_HTML = """
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>CEACGE V20 FUSION Login</title>
+<style>body{font-family:Arial;background:#0a1931;color:white;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
+.card{background:white;color:#0a1931;padding:30px;border-radius:12px;width:90%;max-width:380px}
+input{width:100%;padding:12px;margin:8px 0;border:1px solid #ccc;border-radius:8px}button{width:100%;padding:12px;background:#0a1931;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer}
+</style></head><body><div class="card"><h2 style="text-align:center">CEACGE V20 FUSIÓN<br>V18+V19</h2>
+<form method="post"><input name="username" placeholder="Usuario" required><input name="password" type="password" placeholder="Contraseña" required><button>Entrar</button></form>
+{% if error %}<p style="color:red;text-align:center">{{error}}</p>{% endif %}
+</div></body></html>
+"""
 
-def can_edit(user, alumno):
-    if not user: return False
-    if user.role=='admin': return True
-    return user.ipe_id==alumno.ipe_id
-
-BASE = """
-<!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-<title>CEACGE V19.1</title>
-<style>
-body{font-family:Arial;background:#f4f6f9;margin:0}
-.header{background:#0b2e59;color:#fff;padding:15px;display:flex;justify-content:space-between;flex-wrap:wrap}
-.btn{padding:8px 14px;border-radius:6px;text-decoration:none;color:#fff;border:none;cursor:pointer;margin:2px;display:inline-block}
-.btn-blue{background:#0b2e59}.btn-green{background:#198754}.btn-orange{background:#fd7e14}.btn-red{background:#dc3545}
-.card{background:#fff;padding:16px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.08);margin:12px 0}
-table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e9ecef;text-align:left}
-.badge{padding:5px 10px;border-radius:20px;font-size:11px;font-weight:bold}
-.badge-warn{background:#fff3cd;color:#664d03;border:1px solid #ffecb5}
-input,select{width:100%;padding:11px;margin:6px 0;border:1px solid #ccc;border-radius:8px}
+DASH_HTML = """
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>CEACGE V20</title>
+<style>body{font-family:Arial;background:#f4f6f9;margin:0;padding:0}
+.header{background:#0a1931;color:white;padding:15px;text-align:center}
+.badge{background:#28a745;color:white;padding:4px 10px;border-radius:20px;font-size:12px}
+.stats{display:flex;gap:15px;padding:15px;flex-wrap:wrap;justify-content:center}
+.stat{background:white;padding:15px 25px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.1);min-width:180px;text-align:center}
+.stat h3{margin:0;color:#0a1931;font-size:28px}
+.btns{display:flex;gap:10px;justify-content:center;padding:10px;flex-wrap:wrap}
+.btn{padding:12px 20px;border-radius:8px;text-decoration:none;color:white;font-weight:bold}
+.btn-blue{background:#0a1931}.btn-green{background:#28a745}.btn-orange{background:#ff7f00}
+table{width:95%;margin:15px auto;background:white;border-collapse:collapse;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+th{background:#0a1931;color:white;padding:10px}td{padding:10px;border-bottom:1px solid #eee;text-align:center}
+.action{padding:5px 10px;border-radius:5px;text-decoration:none;color:white;margin:2px;display:inline-block;font-size:13px}
+.ver{background:#17a2b8}.pdf{background:#dc3545}
 </style></head><body>
-<div class=header><b>CEACGE V19.1 - LIVE</b><div>{% if user %}{{user.username}} ({{user.role}}) {% if user.ipe %}- {{user.ipe.codigo}}{% endif %} | <a href=/logout style=color:#fff>Salir</a>{% endif %}</div></div>
-<div style=padding:15px>{% with msgs=get_flashed_messages() %}{% if msgs %}{% for m in msgs %}<div class=card style=background:#fff3cd;border-left:5px solid #ffc107>{{m}}</div>{% endfor %}{% endif %}{% endwith %}{{content|safe}}</div></body></html>
+<div class="header"><h2 style="margin:0">CEACGE V20 FUSION - V18+V19 LIVE</h2><small>{{session.username}} ({{session.rol}}) - {{centro_nombre}} <span class="badge">LIVE</span></small><br><a href="/logout" style="color:#ffc107">Salir</a></div>
+<div class="stats">
+<div class="stat"><h3>{{total_central}}</h3><p>Total Central CEACGE</p></div>
+<div class="stat"><h3>{{total_mis}}</h3><p>Mis Alumnos ({{centro_nombre}})</p></div>
+</div>
+<div class="btns">
+<a class="btn btn-blue" href="/">Mis Alumnos</a>
+<a class="btn btn-green" href="/?view=central">BUSCAR CENTRAL (Solo ver alumnos de todo CEACGE)</a>
+<a class="btn btn-orange" href="/nuevo">+ Nuevo Alumno</a>
+{% if session.rol=='admin' %}<a class="btn btn-blue" href="/centros">Centros</a><a class="btn btn-blue" href="/usuarios">Usuarios - Asignar accesos manualmente</a>{% endif %}
+</div>
+<table>
+<tr><th>Foto</th><th>Nombre</th><th>Apellidos</th><th>IPES</th><th>Centro</th><th>Acciones</th></tr>
+{% for a in alumnos %}
+<tr>
+<td>{% if a.foto_path %}Foto{% else %}-{% endif %}</td>
+<td style="color:#c00000;font-weight:bold">{{a.nombre}}</td>
+<td>{{a.apellidos}}</td>
+<td style="color:#c00000;font-weight:bold">{{a.ipes}}</td>
+<td>{{a.centro_nombre}}</td>
+<td><a class="action ver" href="/ver/{{a.id}}">VER</a> <a class="action pdf" href="/pdf/{{a.id}}">PDF</a></td>
+</tr>
+{% endfor %}
+</table>
+</body></html>
+"""
+
+VER_HTML = """
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>VER</title>
+<style>body{font-family:Arial;background:#f4f6f9;margin:0;padding:20px}.card{max-width:700px;margin:auto;background:white;border-radius:15px;padding:25px;box-shadow:0 4px 15px rgba(0,0,0,.15)}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}.label{font-weight:bold;color:#0a1931}.qr{text-align:center;margin-top:15px}
+</style></head><body><div class="card">
+<h2 style="text-align:center;color:#0a1931">CEACGE V20 - Ficha Completa V18+V19</h2>
+<div class="row"><span class="label">Nombre:</span><span style="color:#c00000;font-weight:bold;font-size:18px">{{a.nombre}} {{a.apellidos}}</span></div>
+<div class="row"><span class="label">IPES:</span><span style="color:#c00000;font-weight:bold">{{a.ipes}}</span></div>
+<div class="row"><span class="label">Nivel:</span><span>{{a.nivel}}</span></div>
+<div class="row"><span class="label">Centro:</span><span>{{a.centro_nombre}}</span></div>
+<div class="row"><span class="label">Fecha Nac:</span><span>{{a.fecha_nacimiento}}</span></div>
+<div class="qr"><img src="data:image/png;base64,{{qr_b64}}" width="180"><p style="font-size:12px;color:#666">QR Verificación CEACGE<br>ceacge-final.onrender.com/ver/{{a.id}}</p></div>
+<br><div style="text-align:center"><a href="/pdf/{{a.id}}" style="background:#dc3545;color:white;padding:12px 25px;border-radius:8px;text-decoration:none;font-weight:bold">Descargar PDF Oficial V18</a> <a href="/" style="background:#0a1931;color:white;padding:12px 25px;border-radius:8px;text-decoration:none;margin-left:10px">Volver</a></div>
+</div></body></html>
 """
 
 @app.route('/login', methods=['GET','POST'])
 def login():
+    error=None
     if request.method=='POST':
-        u=User.query.filter_by(username=request.form['username']).first()
-        if u and check_password_hash(u.password, request.form['password']):
-            session['user_id']=u.id
-            return redirect(url_for('index'))
-        flash('Usuario o clave incorrecta')
-    html="""<div class=card style=max-width:420px;margin:50px auto><h3>CEACGE - Entrar</h3><form method=post><input name=username placeholder="Usuario / Código Centro" required><input name=password type=password placeholder="Contraseña / Código Acceso" required><button class="btn btn-blue" style=width:100%>Entrar</button></form><p style=font-size:12px;color:#666>Admin: admin / admin123<br>Centros: usan el usuario y clave que tú les asignas manualmente</p></div>"""
-    return render_template_string(BASE, content=html, user=None, get_flashed_messages=lambda: [])
+        u=request.form['username']; p=request.form['password']
+        try:
+            conn=get_db(); cur=conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute("SELECT * FROM usuarios WHERE username=%s", (u,))
+            user=cur.fetchone()
+            cur.close(); conn.close()
+            if user and check_password_hash(user['password_hash'], p):
+                session['user_id']=user['id']; session['username']=user['username']; session['rol']=user['rol']; session['centro_id']=user['centro_id']
+                return redirect('/')
+            else:
+                error="Usuario o contraseña incorrectos"
+        except Exception as e:
+            error=str(e)
+    return render_template_string(LOGIN_HTML, error=error)
 
 @app.route('/logout')
 def logout():
-    session.clear(); return redirect(url_for('login'))
+    session.clear()
+    return redirect('/login')
 
 @app.route('/')
-@login_required
+def root_redirect():
+    if 'user_id' not in session:
+        return redirect('/login')
+    return redirect(url_for('index'))
+
+@app.route('/dashboard')
+@app.route('/index')
 def index():
-    u=get_user(); total=Alumno.query.count(); mis=total if u.role=='admin' else Alumno.query.filter_by(ipe_id=u.ipe_id).count()
-    content=f"""
-    <div style=display:grid;grid-template-columns:1fr 1fr;gap:12px>
-      <div class=card><h4>Total Central CEACGE</h4><h1>{total}</h1></div>
-      <div class=card><h4>Mis Alumnos</h4><h1>{mis}</h1><small>{u.ipe.codigo if u.ipe else 'ADMIN'}</small></div>
-    </div>
-    <div class=card>
-      <a class="btn btn-blue" href=/alumnos>📋 Mis Alumnos</a>
-      <a class="btn btn-orange" href=/buscar>🔍 BUSCAR CENTRAL (Solo ver alumnos de todo CEACGE)</a>
-      <a class="btn btn-green" href=/alumnos/nuevo>➕ Nuevo Alumno</a>
-      {'<a class="btn btn-blue" href=/ipes>🏫 Centros</a> <a class="btn btn-blue" href=/usuarios>👤 Usuarios - Asignar accesos manualmente</a>' if u.role=='admin' else ''}
-    </div>
-    """
-    return render_template_string(BASE, content=content, user=u, get_flashed_messages=lambda: [])
+    if 'user_id' not in session:
+        return redirect('/login')
+    view = request.args.get('view','mis')
+    conn=get_db(); cur=conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT nombre FROM centros WHERE id=%s", (session['centro_id'],))
+    centro_row=cur.fetchone()
+    centro_nombre=centro_row['nombre'] if centro_row else 'CENTRO'
+    cur.execute("SELECT COUNT(*) as total FROM alumnos"); total_central=cur.fetchone()['total']
+    cur.execute("SELECT COUNT(*) as total FROM alumnos WHERE centro_id=%s", (session['centro_id'],)); total_mis=cur.fetchone()['total']
+    if view=='central':
+        cur.execute("SELECT a.*, c.nombre as centro_nombre FROM alumnos a JOIN centros c ON a.centro_id=c.id ORDER BY a.id DESC")
+    else:
+        if session['rol']=='admin':
+            cur.execute("SELECT a.*, c.nombre as centro_nombre FROM alumnos a JOIN centros c ON a.centro_id=c.id WHERE a.centro_id=%s ORDER BY a.id DESC", (session['centro_id'],))
+        else:
+            cur.execute("SELECT a.*, c.nombre as centro_nombre FROM alumnos a JOIN centros c ON a.centro_id=c.id WHERE a.centro_id=%s ORDER BY a.id DESC", (session['centro_id'],))
+    alumnos=cur.fetchall()
+    if view=='central':
+        alumnos=cur.fetchall() if 'alumnos' not in locals() else alumnos
+    cur.close(); conn.close()
+    return render_template_string(DASH_HTML, alumnos=alumnos, total_central=total_central, total_mis=total_mis, centro_nombre=centro_nombre)
 
-@app.route('/alumnos')
-@login_required
-def alumnos():
-    u=get_user(); q=request.args.get('q',''); query=Alumno.query if u.role=='admin' else Alumno.query.filter_by(ipe_id=u.ipe_id)
-    if q: query=query.filter((Alumno.nombre.contains(q)) | (Alumno.apellidos.contains(q)) | (Alumno.matricula.contains(q)))
-    lista=query.order_by(Alumno.id.desc()).limit(200).all()
-    rows="".join([f"<tr><td>{a.matricula}</td><td>{a.nombre} {a.apellidos}</td><td>{a.ipe.codigo if a.ipe else ''}</td><td><a class='btn btn-blue' href=/alumnos/{a.id}>VER</a> <a class='btn btn-green' href=/alumnos/{a.id}/pdf>PDF</a> <a class='btn btn-orange' href=/alumnos/{a.id}/editar>Editar</a></td></tr>" for a in lista])
-    return render_template_string(BASE, content=f"<div class=card><h3>Mis Alumnos</h3><form><input name=q value='{q}' placeholder=Buscar...><button class=btn-blue>Buscar</button></form><table><tr><th>Matricula</th><th>Nombre</th><th>Centro</th><th>Acciones</th></tr>{rows}</table></div>", user=u, get_flashed_messages=lambda: [])
+@app.route('/ver/<int:id>')
+def ver(id):
+    if 'user_id' not in session:
+        return redirect('/login')
+    conn=get_db(); cur=conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT a.*, c.nombre as centro_nombre FROM alumnos a JOIN centros c ON a.centro_id=c.id WHERE a.id=%s", (id,))
+    a=cur.fetchone(); cur.close(); conn.close()
+    if not a: return "No encontrado",404
+    qr = qrcode.make(f"https://ceacge-final.onrender.com/ver/{id}")
+    buf=BytesIO(); qr.save(buf, format='PNG'); qr_b64=base64.b64encode(buf.getvalue()).decode()
+    return render_template_string(VER_HTML, a=a, qr_b64=qr_b64)
 
-@app.route('/buscar')
-@login_required
-def buscar():
-    u=get_user(); q=request.args.get('q','').strip(); query=Alumno.query
-    if q: query=query.filter(db.or_(Alumno.nombre.ilike(f"%{q}%"), Alumno.apellidos.ilike(f"%{q}%"), Alumno.matricula.ilike(f"%{q}%"), Alumno.telefono.ilike(f"%{q}%")))
-    lista=query.order_by(Alumno.id.desc()).limit(200).all()
-    rows=""
-    for a in lista:
-        es_mio=can_edit(u,a)
-        if es_mio: acciones=f"<a class='btn btn-blue' href=/alumnos/{a.id}>VER</a> <a class='btn btn-green' href=/alumnos/{a.id}/pdf>PDF</a> <a class='btn btn-orange' href=/alumnos/{a.id}/editar>Editar</a>"
-        else: acciones=f"<a class='btn btn-blue' href=/alumnos/{a.id}>VER</a> <a class='btn btn-green' href=/alumnos/{a.id}/pdf>PDF</a> <span class=badge badge-warn>OTRO CENTRO - SOLO VER</span>"
-        rows+=f"<tr><td>{a.matricula}</td><td>{a.nombre} {a.apellidos}</td><td>{a.ipe.codigo if a.ipe else ''}</td><td>{acciones}</td></tr>"
-    return render_template_string(BASE, content=f"<div class=card><h3>🔍 BUSCAR CENTRAL</h3><p style=font-size:13px>Centros ven todo CEACGE pero SOLO VER. Admin edita todo.</p><form method=get><input name=q value='{q}' placeholder='Buscar...'><button class=btn-blue>Buscar</button></form><table><tr><th>Matricula</th><th>Nombre</th><th>Centro</th><th>Acciones</th></tr>{rows}</table></div>", user=u, get_flashed_messages=lambda: [])
+def generar_pdf_oficial(alumno):
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    w,h = A4
+    azul_granada = HexColor("#0a1931")
+    verde = HexColor("#0b6e4f")
+    rojo_ipes = HexColor("#c00000")
+    c.setFillColor(azul_granada)
+    c.rect(0, h-90, w, 90, fill=1, stroke=0)
+    c.setFillColor(verde)
+    c.rect(0, h-92, w, 8, fill=1, stroke=0)
+    c.setFillColor(HexColor("#FFFFFF"))
+    c.setFont("Helvetica-Bold", 11)
+    c.drawCentredString(w/2, h-25, "REPÚBLICA DE GUINEA ECUATORIAL")
+    c.setFont("Helvetica", 9)
+    c.drawCentredString(w/2, h-38, "MINISTERIO DE EDUCACIÓN, CIENCIA, TECNOLOGÍA Y FORMACIÓN PROFESIONAL")
+    c.setFont("Helvetica-Bold", 13)
+    c.drawCentredString(w/2, h-58, "CENTRO DE APOYO Y GESTIÓN DE ESTUDIANTES DE GUINEA ECUATORIAL - CEACGE")
+    y = h-130
+    c.setFillColor(HexColor("#000000"))
+    c.setFont("Helvetica", 11)
+    c.drawString(85, y, f"Certifica que el alumno:")
+    y -= 50
+    c.setFont("Helvetica-Bold", 18)
+    c.setFillColor(rojo_ipes)
+    c.drawCentredString(w/2, y, f"{alumno['nombre']} {alumno['apellidos'] or ''}")
+    y -= 28
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(w/2, y, f"IPES: {alumno['ipes']}")
+    y -= 55
+    c.setFillColor(HexColor("#000000"))
+    c.setFont("Helvetica", 11)
+    c.drawString(85, y, f"Nivel: {alumno['nivel'] or '-'}")
+    y -= 22
+    c.drawString(85, y, f"Centro: {alumno['centro_nombre']}")
+    y -= 22
+    c.drawString(85, y, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}")
+    y -= 85
+    qr = qrcode.make(f"https://ceacge-final.onrender.com/ver/{alumno['id']}")
+    qr_buf = BytesIO(); qr.save(qr_buf, format='PNG'); qr_buf.seek(0)
+    qr_reader = ImageReader(qr_buf)
+    c.drawImage(qr_reader, w-170, y-30, width=113, height=113)
+    c.setFont("Helvetica-Bold", 11)
+    c.setFillColor(HexColor("#000000"))
+    c.drawCentredString(w/2, y, "El Director CEACGE")
+    y -= 70
+    c.setFont("Helvetica", 10)
+    c.drawCentredString(w/2, y, "___________________________")
+    c.setFont("Helvetica", 7)
+    c.setFillColor(HexColor("#555555"))
+    texto_seg = "Este documento es oficial y está protegido. La falsificación será sancionada conforme a la ley vigente. Verificación QR válida en ceacge-final.onrender.com"
+    c.drawCentredString(w/2, 42, texto_seg)
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer
 
-@app.route('/alumnos/<int:id>')
-@login_required
-def ver_alumno(id):
-    u=get_user(); a=Alumno.query.get_or_404(id); es_mio=can_edit(u,a); url=request.host_url.rstrip('/')+f'/alumnos/{a.id}'; qr=qrcode.make(url); buf=BytesIO(); qr.save(buf,format='PNG'); qr_b64=base64.b64encode(buf.getvalue()).decode()
-    foto=f"<img src='{a.foto}' style=width:200px;height:240px;object-fit:cover;border-radius:12px;border:3px solid #0b2e59>" if a.foto else "<div style=width:200px;height:240px;background:#ddd;display:flex;align-items:center;justify-content:center;border-radius:12px>Sin Foto</div>"
-    aviso="" if es_mio else f"<div class=card style=background:#fff3cd;border-left:5px solid #ffc107><b>SOLO LECTURA:</b> Pertenece a {a.ipe.codigo if a.ipe else 'otro centro'}</div>"
-    return render_template_string(BASE, content=f"{aviso}<div class=card><div style=display:flex;gap:20px;flex-wrap:wrap><div>{foto}<br><br><img src='data:image/png;base64,{qr_b64}' style=width:160px><br><small>{url}</small></div><div><h2>{a.nombre} {a.apellidos}</h2><p>{a.matricula} - {a.ipe.codigo if a.ipe else ''}</p><a class='btn btn-green' href=/alumnos/{a.id}/pdf>PDF Oficial</a>{'<a class=btn-orange href=/alumnos/'+str(a.id)+'/editar>Editar</a>' if es_mio else ''} <a class='btn btn-blue' href=/buscar>Buscar Central</a></div></div></div>", user=u, get_flashed_messages=lambda: [])
+@app.route('/pdf/<int:id>')
+def pdf(id):
+    if 'user_id' not in session:
+        return redirect('/login')
+    conn=get_db(); cur=conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT a.*, c.nombre as centro_nombre FROM alumnos a JOIN centros c ON a.centro_id=c.id WHERE a.id=%s", (id,))
+    a=cur.fetchone(); cur.close(); conn.close()
+    if not a: return "No encontrado",404
+    pdf_buf = generar_pdf_oficial(a)
+    return send_file(pdf_buf, as_attachment=False, download_name=f"CEACGE_{a['ipes']}_V20.pdf", mimetype='application/pdf')
 
-@app.route('/alumnos/<int:id>/editar', methods=['GET','POST'])
-@login_required
-def editar_alumno(id):
-    u=get_user(); a=Alumno.query.get_or_404(id)
-    if not can_edit(u,a): flash(f'⛔ No autorizado: {a.nombre} es de {a.ipe.codigo if a.ipe else "otro centro"}'); return redirect(url_for('buscar'))
-    if request.method=='POST':
-        a.nombre=request.form['nombre']; a.apellidos=request.form['apellidos']; a.matricula=request.form['matricula']; a.especialidad=request.form.get('especialidad',''); db.session.commit(); flash('Actualizado'); return redirect(url_for('alumnos'))
-    return render_template_string(BASE, content=f"<div class=card><h3>Editar {a.nombre}</h3><form method=post><input name=nombre value='{a.nombre}'><input name=apellidos value='{a.apellidos}'><input name=matricula value='{a.matricula}'><input name=especialidad value='{a.especialidad or ''}'><button class=btn-blue>Guardar</button></form></div>", user=u, get_flashed_messages=lambda: [])
-
-@app.route('/alumnos/<int:id>/pdf')
-@login_required
-def pdf_alumno(id):
-    u=get_user(); a=Alumno.query.get_or_404(id)
-    from reportlab.lib.pagesizes import A4; from reportlab.pdfgen import canvas; from reportlab.lib.utils import ImageReader; import textwrap
-    buf=BytesIO(); c=canvas.Canvas(buf,pagesize=A4); w,h=A4
-    c.setFont("Helvetica-Bold",18); c.setFillColorRGB(0.04,0.18,0.35); c.drawCentredString(w/2,h-60,"CENTRO DE ESTUDIOS AVANZADOS CEACGE")
-    c.setFont("Helvetica",11); c.setFillColorRGB(0.2,0.2,0.2); c.drawCentredString(w/2,h-78,"Sistema Central de Gestión Académica - Bata")
-    y=h-280
-    if a.foto and a.foto.startswith('data:image'):
-        try:
-            hdr,dat=a.foto.split(',',1); imgd=base64.b64decode(dat); ibuf=BytesIO(imgd); c.drawImage(ImageReader(ibuf),50,y,width=140,height=170,preserveAspectRatio=True,mask='auto')
-        except: c.rect(50,y,140,170)
-    else: c.rect(50,y,140,170)
-    c.setFillColorRGB(0,0,0); c.setFont("Helvetica-Bold",13); c.drawString(220,h-120,f"EXPEDIENTE - {a.matricula}")
-    c.setFont("Helvetica",11); ly=h-145
-    for d in [f"Nombre: {a.nombre} {a.apellidos}",f"Matricula: {a.matricula}",f"Centro: {a.ipe.nombre if a.ipe else ''} ({a.ipe.codigo if a.ipe else ''})",f"Especialidad: {a.especialidad or '-'}",f"Tel: {a.telefono or '-'}"]:
-        c.drawString(220,ly,d); ly-=20
-    url=request.host_url.rstrip('/')+f'/alumnos/{a.id}'; qr=qrcode.make(url); qbuf=BytesIO(); qr.save(qbuf,format='PNG'); qbuf.seek(0); c.drawImage(ImageReader(qbuf),50,y-110,width=130,height=130)
-    c.setFont("Helvetica-Bold",9); c.setFillColorRGB(0.04,0.18,0.35); c.drawString(50,200,"NOTA DE SEGURIDAD:"); c.setFont("Helvetica",8); c.setFillColorRGB(0.3,0.3,0.3)
-    txt="Este documento es oficial y está registrado en la base de datos central de CEACGE. Cualquier alteración invalida su validez. Verifique autenticidad escaneando QR."
-    for i,ln in enumerate(textwrap.wrap(txt,110)): c.drawString(50,188-i*10,ln)
-    c.setFillColorRGB(0,0,0); c.setFont("Helvetica-Bold",11); c.drawCentredString(w-150,110,"El Director CEACGE"); c.setFont("Helvetica",10); c.drawCentredString(w-150,95,"Firma y Sello"); c.drawString(w-200,70,"___________________________")
-    c.showPage(); c.save(); buf.seek(0); r=make_response(buf.getvalue()); r.headers['Content-Type']='application/pdf'; r.headers['Content-Disposition']=f'inline; filename=CEACGE_{a.matricula}.pdf'; return r
-
-@app.route('/alumnos/nuevo', methods=['GET','POST'])
-@login_required
+@app.route('/nuevo', methods=['GET','POST'])
 def nuevo():
-    u=get_user()
+    if 'user_id' not in session:
+        return redirect('/login')
     if request.method=='POST':
-        ipe_id=u.ipe_id if u.role!='admin' else int(request.form.get('ipe_id',u.ipe_id))
-        al=Alumno(nombre=request.form['nombre'],apellidos=request.form['apellidos'],matricula=request.form['matricula'],especialidad=request.form.get('especialidad',''),ipe_id=ipe_id)
-        db.session.add(al); db.session.commit(); flash('Alumno creado'); return redirect(url_for('alumnos'))
-    opts="".join([f"<option value={i.id}>{i.codigo} - {i.nombre}</option>" for i in Ipe.query.all()])
-    sel=f"<select name=ipe_id>{opts}</select>" if u.role=='admin' else ""
-    return render_template_string(BASE, content=f"<div class=card><h3>Nuevo Alumno</h3><form method=post><input name=nombre placeholder=Nombre required><input name=apellidos placeholder=Apellidos required><input name=matricula placeholder=Matricula required><input name=especialidad placeholder=Especialidad>{sel}<button class=btn-blue>Crear</button></form></div>", user=u, get_flashed_messages=lambda: [])
+        conn=get_db(); cur=conn.cursor()
+        cur.execute("INSERT INTO alumnos (nombre,apellidos,ipes,nivel,centro_id,fecha_nacimiento) VALUES (%s,%s,%s,%s,%s,%s)",
+                    (request.form['nombre'], request.form['apellidos'], request.form['ipes'], request.form['nivel'], session['centro_id'], request.form.get('fecha') or None))
+        conn.commit(); cur.close(); conn.close()
+        return redirect('/')
+    return render_template_string("""
+    <body style="font-family:Arial;padding:20px"><h2>Nuevo Alumno - CEACGE V20 FUSION</h2>
+    <form method="post"><input name="nombre" placeholder="Nombre" required><br><br>
+    <input name="apellidos" placeholder="Apellidos"><br><br>
+    <input name="ipes" placeholder="IPES" required style="color:#c00000;font-weight:bold"><br><br>
+    <input name="nivel" placeholder="Nivel"><br><br>
+    <input name="fecha" type="date"><br><br>
+    <button style="padding:10px 20px;background:#0a1931;color:white">Guardar</button></form><br><a href="/">Volver</a></body>
+    """)
 
-@app.route('/ipes')
-@login_required
-def ipes():
-    u=get_user()
-    if u.role!='admin': abort(403)
-    rows="".join([f"<tr><td>{i.codigo}</td><td>{i.nombre}</td><td><a class='btn btn-orange' href=/ipes/{i.id}/editar>Editar</a></td></tr>" for i in Ipe.query.all()])
-    return render_template_string(BASE, content=f"<div class=card><h3>Centros</h3><a class='btn btn-blue' href=/ipes/nuevo>➕ Nuevo Centro</a><table><tr><th>Codigo</th><th>Nombre</th><th></th></tr>{rows}</table></div>", user=u, get_flashed_messages=lambda: [])
+@app.route('/centros')
+def centros():
+    if 'user_id' not in session or session['rol']!='admin':
+        return redirect('/')
+    conn=get_db(); cur=conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT * FROM centros ORDER BY id"); centros=cur.fetchall(); cur.close(); conn.close()
+    html="<h2>Centros V20</h2><ul>"
+    for c in centros: html+=f"<li>{c['id']} - {c['nombre']} ({c['codigo']})</li>"
+    html+="</ul><a href='/'>Volver</a>"
+    return html
 
-@app.route('/ipes/nuevo', methods=['GET','POST'])
-@login_required
-def nuevo_ipe():
-    u=get_user()
-    if u.role!='admin': abort(403)
-    if request.method=='POST':
-        i=Ipe(codigo=request.form['codigo'].strip().upper(), nombre=request.form['nombre'], director=request.form.get('director',''))
-        db.session.add(i); db.session.commit(); flash(f'Centro {i.codigo} creado. Ahora asignale usuario manual en Usuarios'); return redirect(url_for('ipes'))
-    return render_template_string(BASE, content="<div class=card><h3>Nuevo Centro</h3><form method=post><input name=codigo placeholder=Codigo Ej: IPES-008 required><input name=nombre placeholder=Nombre Centro required><input name=director placeholder=Director><button class=btn-blue>Crear Centro</button></form></div>", user=u, get_flashed_messages=lambda: [])
-
-# --- USUARIOS MANUALES - SOLO CENTRAL ---
 @app.route('/usuarios')
-@login_required
-def lista_usuarios():
-    u=get_user()
-    if u.role!='admin': flash('Solo central'); return redirect(url_for('index'))
-    usuarios=User.query.order_by(User.id.desc()).all()
-    rows="".join([f"<tr><td>{us.username}</td><td>{us.role}</td><td>{us.ipe.codigo if us.ipe else 'CENTRAL'}</td><td><a class='btn btn-orange' href=/usuarios/{us.id}/editar>Editar Clave</a> <a class='btn btn-red' href=/usuarios/{us.id}/eliminar onclick=\"return confirm('¿Borrar?')\">Borrar</a></td></tr>" for us in usuarios])
-    return render_template_string(BASE, content=f"<div class=card><h3>👤 Gestión Manual de Accesos - Central</h3><p style=font-size:13px>Tú asignas manualmente usuario y contraseña/código a cada centro.</p><a class='btn btn-blue' href=/usuarios/nuevo>➕ Asignar Nuevo Usuario a Centro</a><table style=margin-top:12px><tr><th>Usuario / Código</th><th>Rol</th><th>Centro</th><th>Acciones</th></tr>{rows}</table></div>", user=u, get_flashed_messages=lambda: [])
-
-@app.route('/usuarios/nuevo', methods=['GET','POST'])
-@login_required
-def nuevo_usuario_manual():
-    u=get_user()
-    if u.role!='admin': abort(403)
-    if request.method=='POST':
-        username=request.form['username'].strip(); pwd=request.form['password'].strip(); ipe_id=request.form['ipe_id']; role=request.form.get('role','centro')
-        if User.query.filter_by(username=username).first(): flash('Ya existe'); return redirect(url_for('nuevo_usuario_manual'))
-        nuevo=User(username=username, password=generate_password_hash(pwd), role=role, ipe_id=int(ipe_id) if ipe_id else None)
-        db.session.add(nuevo); db.session.commit(); flash(f'✅ Asignado: {username} / {pwd}'); return redirect(url_for('lista_usuarios'))
-    opts="".join([f"<option value={i.id}>{i.codigo} - {i.nombre}</option>" for i in Ipe.query.all()])
-    return render_template_string(BASE, content=f"<div class=card style=max-width:600px;margin:auto><h3>➕ Asignar Usuario Manual</h3><p style=font-size:12px>Ej: Usuario: IPES-007 | Clave: BATA2026</p><form method=post><label>Usuario / Código Centro</label><input name=username required><label>Contraseña / Código Acceso (tú la inventas)</label><input name=password required><label>Centro</label><select name=ipe_id required>{opts}</select><label>Rol</label><select name=role><option value=centro>centro</option><option value=admin>admin</option></select><button class=btn-blue style=width:100%;margin-top:10px>Asignar Manualmente</button></form></div>", user=u, get_flashed_messages=lambda: [])
-
-@app.route('/usuarios/<int:id>/editar', methods=['GET','POST'])
-@login_required
-def editar_usuario_manual(id):
-    u=get_user()
-    if u.role!='admin': abort(403)
-    us=User.query.get_or_404(id)
-    if request.method=='POST':
-        us.username=request.form['username'].strip(); npwd=request.form['password'].strip()
-        if npwd: us.password=generate_password_hash(npwd); flash(f'Clave cambiada a: {npwd}')
-        us.ipe_id=int(request.form['ipe_id']) if request.form['ipe_id'] else None; us.role=request.form.get('role','centro'); db.session.commit(); flash('Actualizado'); return redirect(url_for('lista_usuarios'))
-    opts="".join([f"<option value={i.id} {'selected' if i.id==us.ipe_id else ''}>{i.codigo} - {i.nombre}</option>" for i in Ipe.query.all()])
-    return render_template_string(BASE, content=f"<div class=card style=max-width:600px;margin:auto><h3>Editar {us.username}</h3><form method=post><input name=username value='{us.username}' required><input name=password placeholder='Nueva clave (vacío = no cambiar)'><select name=ipe_id>{opts}</select><select name=role><option value=centro {'selected' if us.role=='centro' else ''}>centro</option><option value=admin {'selected' if us.role=='admin' else ''}>admin</option></select><button class=btn-blue>Guardar</button></form></div>", user=u, get_flashed_messages=lambda: [])
-
-@app.route('/usuarios/<int:id>/eliminar')
-@login_required
-def eliminar_usuario_manual(id):
-    u=get_user()
-    if u.role!='admin': abort(403)
-    us=User.query.get_or_404(id)
-    if us.username=='admin': flash('No puedes borrar admin'); return redirect(url_for('lista_usuarios'))
-    db.session.delete(us); db.session.commit(); flash('Borrado'); return redirect(url_for('lista_usuarios'))
+def usuarios():
+    if 'user_id' not in session or session['rol']!='admin':
+        return redirect('/')
+    conn=get_db(); cur=conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT u.*, c.nombre as centro_nombre FROM usuarios u LEFT JOIN centros c ON u.centro_id=c.id"); users=cur.fetchall(); cur.close(); conn.close()
+    html="<h2>Usuarios - Asignar accesos manualmente - V20</h2><table border=1><tr><th>ID</th><th>Usuario</th><th>Rol</th><th>Centro</th></tr>"
+    for u in users: html+=f"<tr><td>{u['id']}</td><td>{u['username']}</td><td>{u['rol']}</td><td>{u['centro_nombre']}</td></tr>"
+    html+="</table><br><a href='/'>Volver</a>"
+    return html
 
 if __name__=='__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5000)))
