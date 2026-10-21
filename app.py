@@ -25,26 +25,35 @@ def adapt(q): return q.replace('?','%s') if USE_POSTGRES else q
 def init_db():
     conn = get_conn(); cur = conn.cursor()
     try:
-        # Primero intentamos ver si usuarios está rota
         try:
-            cur.execute("SELECT * FROM usuarios LIMIT 1")
+            cur.execute("SELECT usuario FROM usuarios LIMIT 1")
         except:
-            print("Tabla usuarios rota, borrando y recreando...")
-            try:
-                conn.rollback()
-                cur.execute("DROP TABLE IF EXISTS usuarios")
-                conn.commit()
-            except:
-                try: conn.rollback()
-                except: pass
-
+            print("Tabla usuarios rota, borrando...")
+            try: conn.rollback()
+            except: pass
+            cur.execute("DROP TABLE IF EXISTS usuarios")
+            conn.commit()
         if USE_POSTGRES:
-            cur.execute("CREATE TABLE IF NOT EXISTS alumnos (id SERIAL PRIMARY KEY)")
-            cur.execute("CREATE TABLE IF NOT EXISTS alumnos_primaria (id SERIAL PRIMARY KEY)")
-            cur.execute("CREATE TABLE IF NOT EXISTS centros (id SERIAL PRIMARY KEY)")
             cur.execute("CREATE TABLE IF NOT EXISTS usuarios (id SERIAL PRIMARY KEY, usuario TEXT UNIQUE, password TEXT, rol TEXT, centro_codigo TEXT)")
-            cur.execute("CREATE TABLE IF NOT EXISTS notas (id SERIAL PRIMARY KEY, alumno_id INTEGER, curso TEXT, asignatura TEXT, ord TEXT, extra TEXT)")
-            for tbl, cols in [
+        else:
+            cur.execute("CREATE TABLE IF NOT EXISTS usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario TEXT UNIQUE, password TEXT, rol TEXT, centro_codigo TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS alumnos (id SERIAL PRIMARY KEY)")
+        cur.execute("CREATE TABLE IF NOT EXISTS alumnos_primaria (id SERIAL PRIMARY KEY)")
+        cur.execute("CREATE TABLE IF NOT EXISTS centros (id SERIAL PRIMARY KEY)")
+        cur.execute("CREATE TABLE IF NOT EXISTS notas (id SERIAL PRIMARY KEY, alumno_id INTEGER, curso TEXT, asignatura TEXT, ord TEXT, extra TEXT)")
+        cur.execute(adapt("SELECT * FROM usuarios WHERE usuario=?"), ("admin",))
+        if not cur.fetchone():
+            cur.execute(adapt("INSERT INTO usuarios (usuario,password,rol) VALUES (?,?,?)"), ("admin", generate_password_hash("ceacge2025"), "admin"))
+        conn.commit()
+    except Exception as e:
+        print(f"init_db error: {e}")
+        try: conn.rollback()
+        except: pass
+    finally:
+        try: cur.close()
+        except: pass
+        try: conn.close()
+        except: pass
                 ("alumnos", ["nombre TEXT","apellidos TEXT","natural_de TEXT","distrito TEXT","provincia TEXT","centro TEXT","foto TEXT","anio TEXT","contacto TEXT","email TEXT","centro_nombre TEXT","centro_codigo TEXT","centro_localidad TEXT","centro_contacto TEXT"]),
                 ("alumnos_primaria", ["nombre TEXT","apellidos TEXT","hijo_de TEXT","y_de TEXT","fecha_nacimiento TEXT","centro TEXT","localidad TEXT","codigo TEXT","foto TEXT","anio TEXT","centro_codigo TEXT"]),
                 ("centros", ["nombre TEXT","codigo TEXT","localidad TEXT","contacto TEXT","email TEXT","codigo_acceso TEXT"]),
