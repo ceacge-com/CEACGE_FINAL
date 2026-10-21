@@ -1,9 +1,7 @@
 Flask==2.3.3
-gunicorn==21.2.0
 psycopg2-binary==2.9.9
-pandas==2.2.2
-openpyxl==3.1.2
-python-dotenv==1.0.0
+reportlab==4.0.7
+qrcode==7.4.2
+Pillow==10.2.0
 Werkzeug==2.3.7
-setuptools
-numpy==1.26.4
+gunicorn==21.2.0
