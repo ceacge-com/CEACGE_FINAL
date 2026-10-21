@@ -153,10 +153,10 @@ def nuevo():
     if request.method=='POST':
         foto=request.form.get('foto_b64','')
         if len(foto)>2000000: foto=''
-        conn=get_db(); cur=conn.cursor()
-        cur.execute("INSERT INTO alumnos (nombre,apellidos,codigo_alumno,ipes,nivel,fecha_nacimiento,lugar_nacimiento,distrito,provincia,centro_actual,anio_academico,centro_id,foto_base64) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
-        (request.form['nombre'], request.form['apellidos'], request.form['codigo_alumno'], request.form['ipes'], request.form['nivel'], request.form.get('fecha_nacimiento') or None, request.form.get('lugar_nacimiento'), request.form.get('distrito'), request.form.get('provincia'), request.form.get('centro_actual'), request.form.get('anio_academico'), session['centro_id'], foto))
-        nid=cur.fetchone()[0]; conn.commit(); cur.close(); conn.close()
+           conn=get_db(); cur=conn.cursor()
+    placeholders = ",".join(["%s"]*13)
+    sql = f"INSERT INTO alumnos (nombre,apellidos,codigo_alumno,ipes,nivel,fecha_nacimiento,lugar_nacimiento,distrito,provincia,centro_actual,anio_academico,centro_id,foto_base64) VALUES ({placeholders}) RETURNING id"
+    cur.execute(sql, (request.form['nombre'], request.form['apellidos'], request.form['codigo_alumno'], request.form['ipes'], request.form['nivel'], request.form.get('fecha_nacimiento') or None, request.form.get('lugar_nacimiento'), request.form.get('distrito'), request.form.get('provincia'), request.form.get('centro_actual'), request.form.get('anio_academico'), session['centro_id'], foto))
         return redirect(f'/ver/{nid}')
     return render_template_string(NUEVO_HTML, centro_nombre=centro_nombre)
 
