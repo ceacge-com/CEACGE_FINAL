@@ -3,3 +3,4 @@ Werkzeug
 psycopg2-binary
 qrcode
 Pillow
+gunicorn
