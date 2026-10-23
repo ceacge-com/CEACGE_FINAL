@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'CEACGE-V24-COMPLETO'
+app.secret_key = 'CEACGE-V24-FINAL-FIX'
 basedir = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = os.path.join(basedir, "fotos")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -12,23 +12,23 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 USE_PG = DATABASE_URL and 'postgres' in DATABASE_URL
 
 PLAN = {
-    "1 ESBA": ["Lengua Española","Matemáticas","Ciencias Sociales","Ciencias Naturales","Inglés","Francés","Educación Física","Música","Dibujo","Religión/Ética"],
-    "2 ESBA": ["Lengua Española","Matemáticas","Historia","Geografía","Biología","Física y Química","Inglés","Francés","Ed. Física","Tecnología"],
-    "3 ESBA": ["Lengua y Literatura","Matemáticas","Historia de GE y África","Biología","Física","Química","Inglés","Francés","Filosofía","Ed. Física","Informática"],
-    "4 ESBA": ["Lengua y Literatura","Matemáticas","Historia Contemporánea","Biología","Física","Química","Inglés","Francés","Filosofía","Economía","Informática"],
-    "1 BACH - Ciencias": ["Lengua y Literatura","Matemáticas I","Física","Química","Biología","Inglés","Filosofía","Ed. Física","Informática"],
-    "1 BACH - Letras": ["Lengua y Literatura","Historia del Mundo","Filosofía","Literatura Universal","Inglés","Francés","Geografía Humana","Economía","Latín"],
-    "1 BACH - Técnico": ["Lengua y Literatura","Matemáticas Aplicadas","Contabilidad","Economía de Empresa","Informática de Gestión","Inglés","Filosofía","Tecnología Industrial"],
-    "2 BACH - Ciencias": ["Lengua y Literatura","Matemáticas II","Física II","Química II","Biología II","Inglés II","Historia de GE","Filosofía II"],
-    "2 BACH - Letras": ["Lengua y Literatura II","Historia de GE","Filosofía II","Literatura Española","Inglés II","Latín II","Geografía de GE","Historia del Arte"],
-    "2 BACH - Técnico": ["Matemáticas Financieras","Contabilidad II","Informática II","Economía y Organización","Derecho Empresarial","Inglés II","Historia de GE","Proyecto Final"]
+    "1 ESBA": ["Lengua Espanola","Matematicas","Ciencias Sociales","Ciencias Naturales","Ingles","Frances","Educacion Fisica","Musica","Dibujo","Religion/Etica"],
+    "2 ESBA": ["Lengua Espanola","Matematicas","Historia","Geografia","Biologia","Fisica y Quimica","Ingles","Frances","Ed. Fisica","Tecnologia"],
+    "3 ESBA": ["Lengua y Literatura","Matematicas","Historia de GE y Africa","Biologia","Fisica","Quimica","Ingles","Frances","Filosofia","Ed. Fisica","Informatica"],
+    "4 ESBA": ["Lengua y Literatura","Matematicas","Historia Contemporanea","Biologia","Fisica","Quimica","Ingles","Frances","Filosofia","Economia","Informatica"],
+    "1 BACH - Ciencias": ["Lengua y Literatura","Matematicas I","Fisica","Quimica","Biologia","Ingles","Filosofia","Ed. Fisica","Informatica"],
+    "1 BACH - Letras": ["Lengua y Literatura","Historia del Mundo","Filosofia","Literatura Universal","Ingles","Frances","Geografia Humana","Economia","Latin"],
+    "1 BACH - Tecnico": ["Lengua y Literatura","Matematicas Aplicadas","Contabilidad","Economia de Empresa","Informatica de Gestion","Ingles","Filosofia","Tecnologia Industrial"],
+    "2 BACH - Ciencias": ["Lengua y Literatura","Matematicas II","Fisica II","Quimica II","Biologia II","Ingles II","Historia de GE","Filosofia II"],
+    "2 BACH - Letras": ["Lengua y Literatura II","Historia de GE","Filosofia II","Literatura Espanola","Ingles II","Latin II","Geografia de GE","Historia del Arte"],
+    "2 BACH - Tecnico": ["Matematicas Financieras","Contabilidad II","Informatica II","Economia y Organizacion","Derecho Empresarial","Ingles II","Historia de GE","Proyecto Final"]
 }
 
 SELECTIVIDAD = {
-    "Fase General": ["Lengua Española", "Historia", "Historia de la Filosofía", "Idioma (Inglés/Francés)"],
-    "LETRAS Y CCSS / HUMANIDADES": ["Historia de África y de G.E", "Literatura Universal", "Historia de Arte", "Geografía", "Matemáticas Aplicadas a CS", "Latín", "Griego"],
-    "CIENCIAS Y TECNOLOGÍA": ["Matemáticas", "Física", "Química", "Dibujo Técnico", "Informática", "Tecnología Industrial", "Electrotecnia"],
-    "CIENCIAS DE LA NATURALEZA Y SALUD": ["Biología y Geología", "C.N y Salud", "Física y Química"]
+    "Fase General": ["Lengua Espanola", "Historia", "Historia de la Filosofia", "Idioma (Ingles/Frances)"],
+    "LETRAS Y CCSS / HUMANIDADES": ["Historia de Africa y de G.E", "Literatura Universal", "Historia de Arte", "Geografia", "Matematicas Aplicadas a CS", "Latin", "Griego"],
+    "CIENCIAS Y TECNOLOGIA": ["Matematicas", "Fisica", "Quimica", "Dibujo Tecnico", "Informatica", "Tecnologia Industrial", "Electrotecnia"],
+    "CIENCIAS DE LA NATURALEZA Y SALUD": ["Biologia y Geologia", "C.N y Salud", "Fisica y Quimica"]
 }
 
 def get_conn():
@@ -43,7 +43,9 @@ def get_conn():
         return conn
 
 def adapt(q): return q.replace('?','%s') if USE_PG else q
-def gen_codigo(p): return f"{p}{secrets.token_hex(3).upper()}"
+def gen_codigo(p): 
+    import datetime
+    return f"{p}-{datetime.datetime.now().strftime('%H%M%S')}-{secrets.token_hex(2).upper()}"
 def gen_qr(txt):
     try:
         import qrcode
@@ -143,7 +145,9 @@ def alumnos():
 def alumno_nuevo():
     if 'usuario' not in session: return redirect('/login')
     if request.method=='POST':
-        f=request.form; codigo=f.get('codigo_alumno') or gen_codigo("SEC")
+        f=request.form
+        codigo_bruto = f.get('codigo_alumno','').strip()
+        codigo = codigo_bruto if codigo_bruto else gen_codigo("SEC")
         foto_name=None
         if 'foto' in request.files:
             up=request.files['foto']
@@ -156,13 +160,27 @@ def alumno_nuevo():
                     up.save(os.path.join(UPLOAD_FOLDER, foto_name))
         cc=session.get('centro_codigo') if session.get('rol')!='admin' else f.get('centro_codigo') or f.get('centro')
         conn=get_conn(); cur=conn.cursor()
-        cur.execute(adapt("INSERT INTO alumnos (nombre,apellidos,lugar_nacimiento,distrito,provincia,telefono,email,centro,anio,codigo_alumno,foto,centro_codigo,curso) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"), (f.get('nombre'),f.get('apellidos'),f.get('lugar_nacimiento'),f.get('distrito'),f.get('provincia'),f.get('telefono'),f.get('email'),f.get('centro'),f.get('anio'),codigo,foto_name,cc,f.get('curso')))
-        conn.commit()
+        try:
+            cur.execute(adapt("INSERT INTO alumnos (nombre,apellidos,lugar_nacimiento,distrito,provincia,telefono,email,centro,anio,codigo_alumno,foto,centro_codigo,curso) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"), (f.get('nombre'),f.get('apellidos'),f.get('lugar_nacimiento'),f.get('distrito'),f.get('provincia'),f.get('telefono'),f.get('email'),f.get('centro'),f.get('anio'),codigo,foto_name,cc,f.get('curso')))
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            codigo = gen_codigo("SEC")
+            try:
+                cur.execute(adapt("INSERT INTO alumnos (nombre,apellidos,lugar_nacimiento,distrito,provincia,telefono,email,centro,anio,codigo_alumno,foto,centro_codigo,curso) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"), (f.get('nombre'),f.get('apellidos'),f.get('lugar_nacimiento'),f.get('distrito'),f.get('provincia'),f.get('telefono'),f.get('email'),f.get('centro'),f.get('anio'),codigo,foto_name,cc,f.get('curso')))
+                conn.commit()
+                try: cur.close(); conn.close()
+                except: pass
+                return redirect('/alumnos')
+            except Exception as e2:
+                try: cur.close(); conn.close()
+                except: pass
+                return render_template_string(BASE, content=f"<div class='alert alert-danger'><b>El codigo {codigo_bruto} ya existe.</b><br>Deja el campo CODIGO en BLANCO.<br><small>{e}</small></div><a href='/alumnos/nuevo' class='btn btn-primary'>Volver</a> <a href='/dashboard' class='btn btn-warning'>Menu Principal</a>")
         try: cur.close(); conn.close()
         except: pass
         return redirect('/alumnos')
     extra = "<input name='centro_codigo' placeholder='Codigo centro (admin)' class='form-control mb-2'>" if session.get('rol')=='admin' else ""
-    return render_template_string(BASE, content=f"<a href='/alumnos' class='btn btn-sm btn-secondary mb-2'>Volver</a> <a href='/dashboard' class='btn btn-sm btn-warning mb-2'>Menu Principal</a><h4>Nuevo Sec/Bach</h4><form method='post' enctype='multipart/form-data' class='row g-2'><div class='col-md-6'><input name='nombre' placeholder='Nombre' class='form-control' required></div><div class='col-md-6'><input name='apellidos' placeholder='Apellidos' class='form-control' required></div><div class='col-md-4'><input name='lugar_nacimiento' placeholder='Lugar nac' class='form-control'></div><div class='col-md-4'><input name='distrito' placeholder='Distrito' class='form-control'></div><div class='col-md-4'><input name='provincia' placeholder='Provincia' class='form-control'></div><div class='col-md-4'><input name='telefono' placeholder='Telefono' class='form-control'></div><div class='col-md-4'><input name='email' placeholder='Email' class='form-control'></div><div class='col-md-4'><input name='curso' placeholder='Ej: 1 ESBA, 2 BACH' class='form-control'></div><div class='col-md-4'><input name='centro' placeholder='Centro' class='form-control'></div><div class='col-md-4'><input name='anio' placeholder='Anio' class='form-control'></div><div class='col-md-4'><input name='codigo_alumno' placeholder='Codigo auto' class='form-control'></div><div class='col-md-4'>{extra}</div><div class='col-md-6'><input type='file' name='foto' class='form-control'></div><div class='col-12'><button class='btn btn-primary'>Guardar</button></div></form>")
+    return render_template_string(BASE, content=f"<a href='/alumnos' class='btn btn-sm btn-secondary mb-2'>Volver</a> <a href='/dashboard' class='btn btn-sm btn-warning mb-2'>Menu Principal</a><h4>Nuevo Sec/Bach</h4><div class='alert alert-info py-1'><small>Consejo: Deja el CODIGO en blanco para que se genere automatico.</small></div><form method='post' enctype='multipart/form-data' class='row g-2'><div class='col-md-6'><input name='nombre' placeholder='Nombre' class='form-control' required></div><div class='col-md-6'><input name='apellidos' placeholder='Apellidos' class='form-control' required></div><div class='col-md-4'><input name='lugar_nacimiento' placeholder='Lugar nac' class='form-control'></div><div class='col-md-4'><input name='distrito' placeholder='Distrito' class='form-control'></div><div class='col-md-4'><input name='provincia' placeholder='Provincia' class='form-control'></div><div class='col-md-4'><input name='telefono' placeholder='Telefono' class='form-control'></div><div class='col-md-4'><input name='email' placeholder='Email' class='form-control'></div><div class='col-md-4'><input name='curso' placeholder='Ej: 1 ESBA, 2 BACH' class='form-control'></div><div class='col-md-4'><input name='centro' placeholder='Centro' class='form-control'></div><div class='col-md-4'><input name='anio' placeholder='Anio' class='form-control'></div><div class='col-md-4'><input name='codigo_alumno' placeholder='Codigo auto (deja en blanco)' class='form-control'></div><div class='col-md-4'>{extra}</div><div class='col-md-6'><input type='file' name='foto' class='form-control'></div><div class='col-12'><button class='btn btn-primary'>Guardar</button></div></form>")
 
 @app.route('/alumno/<int:id>/editar', methods=['GET','POST'])
 def alumno_editar(id):
@@ -207,7 +225,7 @@ def alumno_ver(id):
     if not materias_curso:
         for k,v in PLAN.items():
             if curso_actual.lower() in k.lower() or k.lower() in curso_actual.lower(): materias_curso=v; break
-    if not materias_curso: materias_curso=["Lengua Española","Matemáticas","Historia","Inglés"]
+    if not materias_curso: materias_curso=["Lengua Espanola","Matematicas","Historia","Ingles"]
     trim_html = ""
     for mat in materias_curso:
         vals = datos_trim.get(mat, {})
@@ -280,7 +298,7 @@ def alumno_selectividad(id):
     try: cur.close(); conn.close()
     except: pass
     html_rows="".join([f"<tr><td>{(dict(s)['fase'] if isinstance(s,dict) else s[2])}</td><td>{(dict(s)['asignatura'] if isinstance(s,dict) else s[3])}</td><td><b>{(dict(s)['nota'] if isinstance(s,dict) else s[4])}</b></td><td><a href='/selectividad/{(dict(s)['id'] if isinstance(s,dict) else s[0])}/borrar' class='btn btn-sm btn-danger'>Borrar</a></td></tr>" for s in rows]) or "<tr><td colspan=4>Sin datos</td></tr>"
-    return render_template_string(BASE, content=f"<a href='/alumno/{id}' class='btn btn-secondary btn-sm'>Volver a Ficha</a> <a href='/dashboard' class='btn btn-warning btn-sm'>Menu Principal</a><h4 class='mt-3'>Selectividad - {d['nombre']} {d['apellidos']} ({d['codigo_alumno']})</h4><div class='card p-3 mt-3'><table class='table table-bordered'><tr><th>Fase</th><th>Asignatura</th><th>Nota</th><th></th></tr>{html_rows}</table><hr><h5>Añadir Nota Selectividad</h5><form method='post' action='/alumno/{id}/selectividad/add' class='row g-2'><div class='col-md-3'><label>Fase</label><select name='fase' class='form-control'><option value='Fase General'>Fase General</option><option value='LETRAS Y CCSS / HUMANIDADES'>Letras y CCSS / Humanidades</option><option value='CIENCIAS Y TECNOLOGIA'>Ciencias y Tecnologia</option><option value='CIENCIAS DE LA NATURALEZA Y SALUD'>Ciencias Naturaleza y Salud</option></select></div><div class='col-md-4'><label>Asignatura</label><select name='asignatura' class='form-control'><option>Lengua Española</option><option>Historia</option><option>Historia de la Filosofía</option><option>Idioma (Inglés/Francés)</option><option>Historia de África y de G.E</option><option>Literatura Universal</option><option>Historia de Arte</option><option>Geografía</option><option>Matemáticas Aplicadas a CS</option><option>Latín</option><option>Griego</option><option>Matemáticas</option><option>Física</option><option>Química</option><option>Dibujo Técnico</option><option>Informática</option><option>Tecnología Industrial</option><option>Electrotecnia</option><option>Biología y Geología</option><option>C.N y Salud</option></select></div><div class='col-md-2'><label>Nota</label><input name='nota' class='form-control' required></div><div class='col-md-3'><label>Convocatoria</label><input name='convocatoria' class='form-control' value='Junio 2025'></div><div class='col-12'><button class='btn btn-dark'>Guardar</button></div></form></div>")
+    return render_template_string(BASE, content=f"<a href='/alumno/{id}' class='btn btn-secondary btn-sm'>Volver a Ficha</a> <a href='/dashboard' class='btn btn-warning btn-sm'>Menu Principal</a><h4 class='mt-3'>Selectividad - {d['nombre']} {d['apellidos']} ({d['codigo_alumno']})</h4><div class='card p-3 mt-3'><table class='table table-bordered'><tr><th>Fase</th><th>Asignatura</th><th>Nota</th><th></th></tr>{html_rows}</table><hr><h5>Anadir Nota Selectividad</h5><form method='post' action='/alumno/{id}/selectividad/add' class='row g-2'><div class='col-md-3'><label>Fase</label><select name='fase' class='form-control'><option value='Fase General'>Fase General</option><option value='LETRAS Y CCSS / HUMANIDADES'>Letras y CCSS / Humanidades</option><option value='CIENCIAS Y TECNOLOGIA'>Ciencias y Tecnologia</option><option value='CIENCIAS DE LA NATURALEZA Y SALUD'>Ciencias Naturaleza y Salud</option></select></div><div class='col-md-4'><label>Asignatura</label><select name='asignatura' class='form-control'><option>Lengua Espanola</option><option>Historia</option><option>Historia de la Filosofia</option><option>Idioma (Ingles/Frances)</option><option>Historia de Africa y de G.E</option><option>Literatura Universal</option><option>Historia de Arte</option><option>Geografia</option><option>Matematicas Aplicadas a CS</option><option>Latin</option><option>Griego</option><option>Matematicas</option><option>Fisica</option><option>Quimica</option><option>Dibujo Tecnico</option><option>Informatica</option><option>Tecnologia Industrial</option><option>Electrotecnia</option><option>Biologia y Geologia</option><option>C.N y Salud</option></select></div><div class='col-md-2'><label>Nota</label><input name='nota' class='form-control' required></div><div class='col-md-3'><label>Convocatoria</label><input name='convocatoria' class='form-control' value='Junio 2025'></div><div class='col-12'><button class='btn btn-dark'>Guardar</button></div></form></div>")
 
 @app.route('/alumno/<int:id>/selectividad/add', methods=['POST'])
 def selectividad_add(id):
@@ -330,13 +348,19 @@ def primaria_nuevo():
                 up.save(os.path.join(UPLOAD_FOLDER, foto_name))
         cc=session.get('centro_codigo') if session.get('rol')!='admin' else request.form.get('centro_codigo') or request.form.get('centro')
         conn=get_conn(); cur=conn.cursor()
-        cur.execute(adapt("INSERT INTO alumnos_primaria (nombre,apellidos,foto,codigo_alumno,centro,anio,centro_codigo) VALUES (?,?,?,?,?,?,?)"), (request.form.get('nombre'),request.form.get('apellidos'),foto_name,codigo,request.form.get('centro'),request.form.get('anio'),cc))
-        conn.commit()
+        try:
+            cur.execute(adapt("INSERT INTO alumnos_primaria (nombre,apellidos,foto,codigo_alumno,centro,anio,centro_codigo) VALUES (?,?,?,?,?,?,?)"), (request.form.get('nombre'),request.form.get('apellidos'),foto_name,codigo,request.form.get('centro'),request.form.get('anio'),cc))
+            conn.commit()
+        except:
+            conn.rollback()
+            codigo = gen_codigo("PRI")
+            cur.execute(adapt("INSERT INTO alumnos_primaria (nombre,apellidos,foto,codigo_alumno,centro,anio,centro_codigo) VALUES (?,?,?,?,?,?,?)"), (request.form.get('nombre'),request.form.get('apellidos'),foto_name,codigo,request.form.get('centro'),request.form.get('anio'),cc))
+            conn.commit()
         try: cur.close(); conn.close()
         except: pass
         return redirect('/primaria')
     extra = "<input name='centro_codigo' placeholder='Codigo centro (admin)' class='form-control mb-2'>" if session.get('rol')=='admin' else ""
-    return render_template_string(BASE, content=f"<a href='/primaria' class='btn btn-sm btn-secondary mb-2'>Volver</a> <a href='/dashboard' class='btn btn-sm btn-warning mb-2'>Menu Principal</a><h4>Nuevo Primaria</h4><form method='post' enctype='multipart/form-data'><input name='nombre' placeholder='Nombre' class='form-control mb-2' required><input name='apellidos' placeholder='Apellidos' class='form-control mb-2' required><input name='centro' placeholder='Centro' class='form-control mb-2'><input name='anio' placeholder='Anio' class='form-control mb-2'><input name='codigo_alumno' placeholder='Codigo auto' class='form-control mb-2'>{extra}<input type='file' name='foto' class='form-control mb-2' accept='image/*' required><button class='btn btn-success'>Guardar</button></form>")
+    return render_template_string(BASE, content=f"<a href='/primaria' class='btn btn-sm btn-secondary mb-2'>Volver</a> <a href='/dashboard' class='btn btn-sm btn-warning mb-2'>Menu Principal</a><h4>Nuevo Primaria</h4><form method='post' enctype='multipart/form-data'><input name='nombre' placeholder='Nombre' class='form-control mb-2' required><input name='apellidos' placeholder='Apellidos' class='form-control mb-2' required><input name='centro' placeholder='Centro' class='form-control mb-2'><input name='anio' placeholder='Anio' class='form-control mb-2'><input name='codigo_alumno' placeholder='Codigo auto (deja en blanco)' class='form-control mb-2'>{extra}<input type='file' name='foto' class='form-control mb-2' accept='image/*' required><button class='btn btn-success'>Guardar</button></form>")
 
 @app.route('/primaria/<int:id>')
 def primaria_ver(id):
