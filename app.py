@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'CEACGE-V28-3-FINAL'
+app.secret_key = 'CEACGE-V28-4-FINAL-TODO'
 basedir = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = os.path.join(basedir, "fotos")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -90,7 +90,7 @@ def init_db():
         except: pass
 init_db()
 
-BASE="<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>CEACGE</title><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body><nav class='navbar navbar-dark bg-primary'><div class='container'><a class='navbar-brand' href='/dashboard'>CEACGE V28.3</a><div><a href='/dashboard' class='btn btn-sm btn-warning me-2'>Menu</a><a href='/consulta' class='btn btn-sm btn-light me-2'>Consulta</a><span class='text-white me-2'>{{session.usuario}} ({{session.rol}})</span><a href='/logout' class='text-white'>Salir</a></div></div></nav><div class='container mt-4'>{{content|safe}}</div></body></html>"
+BASE="<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>CEACGE</title><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body><nav class='navbar navbar-dark bg-primary'><div class='container'><a class='navbar-brand' href='/dashboard'>CEACGE V28.4</a><div><a href='/dashboard' class='btn btn-sm btn-warning me-2'>Menu</a><a href='/consulta' class='btn btn-sm btn-light me-2'>Consulta</a><span class='text-white me-2'>{{session.usuario}} ({{session.rol}})</span><a href='/logout' class='text-white'>Salir</a></div></div></nav><div class='container mt-4'>{{content|safe}}</div></body></html>"
 
 @app.route('/')
 def index(): return redirect('/dashboard' if 'usuario' in session else '/login')
@@ -111,9 +111,10 @@ def login():
                 session['centro_codigo']=row['centro_codigo'] if isinstance(row,dict) else row[4]
                 return redirect('/dashboard')
         err="Usuario incorrecto"
-    return render_template_string("<html><head><meta charset='utf-8'><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body class='bg-light'><div class='container d-flex justify-content-center align-items-center vh-100'><div class='card p-4' style='width:360px'><h4 class='text-center'>CEACGE V28.3</h4>{% if err %}<div class='alert alert-danger'>{{err}}</div>{% endif %}<form method='post'><input class='form-control mb-2' name='usuario' placeholder='Usuario' required><input class='form-control mb-3' type='password' name='password' placeholder='Pass' required><button class='btn btn-primary w-100'>Entrar</button></form><hr><a href='/consulta' class='btn btn-outline-secondary w-100'>Consulta por Codigo</a></div></div></body></html>", err=err)
+    return render_template_string("<html><head><meta charset='utf-8'><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body class='bg-light'><div class='container d-flex justify-content-center align-items-center vh-100'><div class='card p-4' style='width:360px'><h4 class='text-center'>CEACGE V28.4</h4>{% if err %}<div class='alert alert-danger'>{{err}}</div>{% endif %}<form method='post'><input class='form-control mb-2' name='usuario' placeholder='Usuario' required><input class='form-control mb-3' type='password' name='password' placeholder='Pass' required><button class='btn btn-primary w-100'>Entrar</button></form><hr><a href='/consulta' class='btn btn-outline-secondary w-100'>Consulta por Codigo</a></div></div></body></html>", err=err)
 @app.route('/logout')
 def logout(): session.clear(); return redirect('/login')
+
 @app.route('/dashboard')
 def dashboard():
     if 'usuario' not in session: return redirect('/login')
@@ -126,7 +127,7 @@ def dashboard():
     finally:
         try: cur.close(); conn.close()
         except: pass
-    return render_template_string(BASE, content=f"<h3>Panel {session['usuario']}</h3><div class='row g-3 mt-2'><div class='col-md-4'><div class='card p-3'><h5>Secundaria y Bachillerato</h5><h2>{sec}</h2><a href='/alumnos' class='btn btn-primary btn-sm'>Ver Listado</a></div></div><div class='col-md-4'><div class='card p-3'><h5>Primaria</h5><h2>{pri}</h2><a href='/primaria' class='btn btn-success btn-sm'>Ver</a></div></div><div class='col-md-4'><div class='card p-3'><h5>Centros</h5><h2>{cen}</h2><a href='/centros' class='btn btn-warning btn-sm'>Ver</a></div></div></div>")
+    return render_template_string(BASE, content=f"<h3>Panel {session['usuario']}</h3><div class='row g-3 mt-2'><div class='col-md-4'><div class='card p-3'><h5>Secundaria y Bachillerato</h5><h2>{sec}</h2><a href='/alumnos' class='btn btn-primary btn-sm'>Ver Listado</a></div></div><div class='col-md-4'><div class='card p-3'><h5>Primaria</h5><h2>{pri}</h2><a href='/primaria' class='btn btn-success btn-sm'>Ver</a></div></div><div class='col-md-4'><div class='card p-3'><h5>Centros</h5><h2>{cen}</h2><a href='/centros' class='btn btn-warning btn-sm'>Ver</a></div></div></div><div class='mt-4'><a href='/alumnos/nuevo' class='btn btn-primary'>+ Sec/Bach</a> <a href='/primaria/nuevo' class='btn btn-success'>+ Primaria</a> <a href='/centros/nuevo' class='btn btn-warning'>+ Centro</a> <a href='/usuarios' class='btn btn-dark'>Usuarios</a></div>")
 
 @app.route('/alumnos')
 def alumnos():
@@ -135,12 +136,159 @@ def alumnos():
     cur.execute("SELECT * FROM alumnos ORDER BY id DESC"); rows=cur.fetchall()
     try: cur.close(); conn.close()
     except: pass
-    html="<div class='d-flex justify-content-between'><h4>Secundaria y Bach <a href='/alumnos/nuevo' class='btn btn-sm btn-primary'>+ Nuevo</a></h4><a href='/dashboard' class='btn btn-sm btn-secondary'>Menu Principal</a></div><table class='table table-hover'><tr><th>Codigo</th><th>Nombre</th><th>Accion</th></tr>"
+    html="<div class='d-flex justify-content-between'><h4>Secundaria y Bach <a href='/alumnos/nuevo' class='btn btn-sm btn-primary'>+ Nuevo</a></h4><a href='/dashboard' class='btn btn-sm btn-secondary'>Menu Principal</a></div><table class='table table-hover'><tr><th>Codigo</th><th>Nombre</th><th>Centro</th><th>Accion</th></tr>"
     for r in rows:
-        d=dict(r) if isinstance(r,dict) else {'id':r[0],'nombre':r[1],'apellidos':r[2],'codigo_alumno':r[10]}
-        html+=f"<tr><td><b>{d['codigo_alumno']}</b></td><td>{d['nombre']} {d['apellidos']}</td><td><a href='/alumno/{d['id']}' class='btn btn-sm btn-primary'>Ver</a> <a href='/alumno/{d['id']}/selectividad' class='btn btn-sm btn-dark'>Selectividad</a></td></tr>"
+        d=dict(r) if isinstance(r,dict) else {'id':r[0],'nombre':r[1],'apellidos':r[2],'centro':r[8],'codigo_alumno':r[10],'centro_codigo':r[12]}
+        html+=f"<tr><td><b>{d['codigo_alumno']}</b></td><td>{d['nombre']} {d['apellidos']}</td><td>{d['centro']} ({d['centro_codigo']})</td><td><div class='btn-group'><a href='/alumno/{d['id']}' class='btn btn-sm btn-primary'>Ver/Notas</a><a href='/alumno/{d['id']}/editar' class='btn btn-sm btn-warning'>Editar</a><a href='/alumno/{d['id']}/selectividad' class='btn btn-sm btn-dark'>Selectividad</a></div></td></tr>"
     html+="</table>"
     return render_template_string(BASE, content=html)
+
+@app.route('/alumnos/nuevo', methods=['GET','POST'])
+def alumno_nuevo():
+    if 'usuario' not in session: return redirect('/login')
+    if request.method=='POST':
+        f=request.form; codigo=f.get('codigo_alumno','').strip() or gen_codigo("SEC")
+        foto_name=None
+        if 'foto' in request.files:
+            up=request.files['foto']
+            if up.filename:
+                foto_name=secure_filename(f"{codigo}_{up.filename}")
+                up.save(os.path.join(UPLOAD_FOLDER, foto_name))
+        cc=session.get('centro_codigo') if session.get('rol')!='admin' else f.get('centro_codigo') or f.get('centro')
+        conn=get_conn(); cur=conn.cursor()
+        try:
+            cur.execute(adapt("INSERT INTO alumnos (nombre,apellidos,lugar_nacimiento,distrito,provincia,telefono,email,centro,anio,codigo_alumno,foto,centro_codigo,curso) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"), (f.get('nombre'),f.get('apellidos'),f.get('lugar_nacimiento'),f.get('distrito'),f.get('provincia'),f.get('telefono'),f.get('email'),f.get('centro'),f.get('anio'),codigo,foto_name,cc,f.get('curso')))
+            conn.commit()
+        except:
+            codigo=gen_codigo("SEC")
+            cur.execute(adapt("INSERT INTO alumnos (nombre,apellidos,lugar_nacimiento,distrito,provincia,telefono,email,centro,anio,codigo_alumno,foto,centro_codigo,curso) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"), (f.get('nombre'),f.get('apellidos'),f.get('lugar_nacimiento'),f.get('distrito'),f.get('provincia'),f.get('telefono'),f.get('email'),f.get('centro'),f.get('anio'),codigo,foto_name,cc,f.get('curso')))
+            conn.commit()
+        try: cur.close(); conn.close()
+        except: pass
+        return redirect('/alumnos')
+    extra = "<input name='centro_codigo' placeholder='Codigo centro (admin)' class='form-control mb-2'>" if session.get('rol')=='admin' else ""
+    return render_template_string(BASE, content=f"<a href='/alumnos' class='btn btn-sm btn-secondary mb-2'>Volver</a> <a href='/dashboard' class='btn btn-sm btn-warning mb-2'>Menu Principal</a><h4>Nuevo Sec/Bach</h4><form method='post' enctype='multipart/form-data' class='row g-2'><div class='col-md-6'><input name='nombre' placeholder='Nombre' class='form-control' required></div><div class='col-md-6'><input name='apellidos' placeholder='Apellidos' class='form-control' required></div><div class='col-md-4'><input name='curso' placeholder='Ej: 2 BACH - Ciencias' class='form-control'></div><div class='col-md-4'><input name='centro' placeholder='Centro' class='form-control'></div><div class='col-md-4'><input name='codigo_alumno' placeholder='Codigo auto' class='form-control'></div><div class='col-md-4'>{extra}</div><div class='col-md-4'><input type='file' name='foto' class='form-control'></div><div class='col-12'><button class='btn btn-primary'>Guardar</button></div></form>")
+
+@app.route('/alumno/<int:id>/editar', methods=['GET','POST'])
+def alumno_editar(id):
+    if 'usuario' not in session: return redirect('/login')
+    conn=get_conn(); cur=conn.cursor()
+    cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"), (id,)); r=cur.fetchone()
+    if not r: 
+        try: cur.close(); conn.close()
+        except: pass
+        return "No encontrado",404
+    d=dict(r) if isinstance(r,dict) else {'id':r[0],'nombre':r[1],'apellidos':r[2],'lugar_nacimiento':r[3],'distrito':r[4],'provincia':r[5],'telefono':r[6],'email':r[7],'centro':r[8],'anio':r[9],'codigo_alumno':r[10],'foto':r[11],'centro_codigo':r[12],'curso':r[13]}
+    if request.method=='POST':
+        f=request.form
+        cur.execute(adapt("UPDATE alumnos SET nombre=?, apellidos=?, lugar_nacimiento=?, distrito=?, provincia=?, telefono=?, email=?, centro=?, anio=?, curso=?, centro_codigo=? WHERE id=?"), (f.get('nombre'),f.get('apellidos'),f.get('lugar_nacimiento'),f.get('distrito'),f.get('provincia'),f.get('telefono'),f.get('email'),f.get('centro'),f.get('anio'),f.get('curso'),f.get('centro_codigo') or d['centro_codigo'], id))
+        conn.commit()
+        try: cur.close(); conn.close()
+        except: pass
+        return redirect(f'/alumno/{id}')
+    try: cur.close(); conn.close()
+    except: pass
+    return render_template_string(BASE, content=f"<a href='/alumnos' class='btn btn-sm btn-secondary mb-2'>Volver al listado</a> <a href='/dashboard' class='btn btn-sm btn-warning mb-2'>Menu Principal</a><h4>Editar Alumno {d['codigo_alumno']}</h4><form method='post' class='row g-2'><div class='col-md-6'><label>Nombre</label><input name='nombre' value='{d.get('nombre','')}' class='form-control' required></div><div class='col-md-6'><label>Apellidos</label><input name='apellidos' value='{d.get('apellidos','')}' class='form-control' required></div><div class='col-md-4'><label>Lugar Nacimiento</label><input name='lugar_nacimiento' value='{d.get('lugar_nacimiento','')}' class='form-control'></div><div class='col-md-4'><label>Distrito</label><input name='distrito' value='{d.get('distrito','')}' class='form-control'></div><div class='col-md-4'><label>Provincia</label><input name='provincia' value='{d.get('provincia','')}' class='form-control'></div><div class='col-md-4'><label>Telefono</label><input name='telefono' value='{d.get('telefono','')}' class='form-control'></div><div class='col-md-4'><label>Email</label><input name='email' value='{d.get('email','')}' class='form-control'></div><div class='col-md-4'><label>Curso</label><input name='curso' value='{d.get('curso','')}' class='form-control'></div><div class='col-md-4'><label>Centro</label><input name='centro' value='{d.get('centro','')}' class='form-control'></div><div class='col-md-4'><label>Anio</label><input name='anio' value='{d.get('anio','')}' class='form-control'></div><div class='col-md-4'><label>Codigo Centro</label><input name='centro_codigo' value='{d.get('centro_codigo','')}' class='form-control'></div><div class='col-12'><button class='btn btn-success'>Guardar Cambios</button> <a href='/alumno/{id}' class='btn btn-secondary'>Cancelar</a></div></form>")
+
+@app.route('/alumno/<int:id>')
+def alumno_ver(id):
+    if 'usuario' not in session: return redirect('/login')
+    conn=get_conn(); cur=conn.cursor()
+    cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"), (id,)); r=cur.fetchone()
+    if not r: return "No encontrado",404
+    d=dict(r) if isinstance(r,dict) else {'id':r[0],'nombre':r[1],'apellidos':r[2],'codigo_alumno':r[10],'centro':r[8],'curso':r[13],'foto':r[11]}
+    cur.execute(adapt("SELECT * FROM notas_trimestres WHERE alumno_codigo=?"), (d['codigo_alumno'],)); nt_row=cur.fetchone()
+    cur.execute(adapt("SELECT * FROM selectividad WHERE alumno_codigo=? ORDER BY fase, bloque"), (d['codigo_alumno'],)); sel_rows=cur.fetchall()
+    try: cur.close(); conn.close()
+    except: pass
+    qr=gen_qr(f"https://ceacge-final.onrender.com/consulta?codigo={d['codigo_alumno']}")
+    foto_html=f"<img src='/fotos/{d['foto']}' style='width:150px;border-radius:8px' onerror=\"this.style.display='none'\">" if d.get('foto') else "<small>Sin foto</small>"
+    import json
+    datos_trim = {}
+    curso_actual = d.get('curso') or ''
+    if nt_row:
+        nd = dict(nt_row) if isinstance(nt_row,dict) else {'datos':nt_row[3],'curso':nt_row[2]}
+        curso_actual = nd.get('curso') or curso_actual
+        try: datos_trim = json.loads(nd.get('datos') or '{}')
+        except: datos_trim={}
+    materias_curso = PLAN.get(curso_actual) or ["Lengua Espanola","Matematicas","Historia","Ingles"]
+    trim_html = ""
+    for mat in materias_curso:
+        vals = datos_trim.get(mat, {})
+        def _col(v):
+            try:
+                if not v: return ""
+                return "color:#d00000;font-weight:bold;background:#ffe0e0" if float(str(v).replace(',','.'))<5 else "color:#0a7d00;font-weight:bold;background:#e7f3ff"
+            except: return ""
+        trim_html+=f"<tr><td><b>{mat}</b></td><td><input name='T1_{mat}' value='{vals.get('T1','')}' class='form-control form-control-sm' style='{_col(vals.get('T1',''))}'></td><td><input name='T2_{mat}' value='{vals.get('T2','')}' class='form-control form-control-sm' style='{_col(vals.get('T2',''))}'></td><td><input name='T3_{mat}' value='{vals.get('T3','')}' class='form-control form-control-sm' style='{_col(vals.get('T3',''))}'></td><td><input name='JUN_{mat}' value='{vals.get('JUN','')}' class='form-control form-control-sm' style='{_col(vals.get('JUN',''))}'></td></tr>"
+    sel_html=""
+    for s in sel_rows:
+        sd=dict(s) if isinstance(s,dict) else {}
+        if sd: n1=sd.get('nota',''); n2=sd.get('nota2','')
+        else: n1=s[4] if len(s)>4 else ''; n2=s[5] if len(s)>5 else ''; sd={'fase':s[2] if len(s)>2 else '', 'asignatura':s[3] if len(s)>3 else '', 'bloque':s[8] if len(s)>8 else ''}
+        sel_html+=f"<tr><td><b>{sd.get('fase','')}</b><br><small>{sd.get('bloque','')}</small></td><td>{sd.get('asignatura','')}</td><td style='{nota_color(n1)}'>{n1}</td><td style='{nota_color(n2)}'>{n2}</td></tr>"
+    if not sel_html: sel_html="<tr><td colspan=4>Sin notas de Selectividad</td></tr>"
+    return render_template_string(BASE, content=f"<div class='d-flex gap-2 mb-2'><a href='/alumnos' class='btn btn-secondary btn-sm'>Volver Listado</a><a href='/dashboard' class='btn btn-warning btn-sm'>Menu Principal</a><a href='/alumno/{id}/editar' class='btn btn-warning btn-sm'>Editar Datos</a><a href='/alumno/{id}/notas' class='btn btn-primary btn-sm'>Ver Boletin</a><a href='/alumno/{id}/selectividad' class='btn btn-dark btn-sm'>Selectividad</a></div><div class='row'><div class='col-md-8'><h4>{d['nombre']} {d['apellidos']} <small>({d['codigo_alumno']})</small></h4><p>Centro:{d.get('centro')} Curso:<b>{d.get('curso')}</b></p><h5>Notas Trimestrales (rojo si &lt;5)</h5><form method='post' action='/alumno/{id}/notas_trimestre/guardar'><table class='table table-bordered table-sm'><tr><th>Materia</th><th>1er Trim</th><th>2do Trim</th><th>3er Trim</th><th>Junio Final</th></tr>{trim_html}</table><button class='btn btn-success'>Guardar Notas Trimestrales</button></form><hr><h5>Selectividad - Nota Fase 1 y Fase 2</h5><table class='table'><tr><th>Fase</th><th>Asignatura</th><th>Nota Fase 1</th><th>Nota Fase 2</th></tr>{sel_html}</table></div><div class='col-md-4 text-center'>{foto_html}<br><br><div class='card p-2'><b>QR</b><br><img src='{qr}' style='width:180px'></div></div></div>")
+
+@app.route('/alumno/<int:id>/notas_trimestre/guardar', methods=['POST'])
+def guardar_trimestres(id):
+    if 'usuario' not in session: return redirect('/login')
+    conn=get_conn(); cur=conn.cursor()
+    cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"), (id,)); r=cur.fetchone()
+    d=dict(r) if isinstance(r,dict) else {'codigo_alumno':r[10],'centro_codigo':r[12]}
+    import json
+    datos={}
+    for k,v in request.form.items():
+        if k.startswith(('T1_','T2_','T3_','JUN_')):
+            parts=k.split('_',1); trim=parts[0]; mat=parts[1]
+            if mat not in datos: datos[mat]={}
+            datos[mat][trim]=v.strip()
+    json_data=json.dumps(datos, ensure_ascii=False)
+    cur.execute(adapt("SELECT * FROM notas_trimestres WHERE alumno_codigo=?"), (d['codigo_alumno'],))
+    existe=cur.fetchone()
+    if existe: cur.execute(adapt("UPDATE notas_trimestres SET datos=? WHERE alumno_codigo=?"), (json_data, d['codigo_alumno']))
+    else: cur.execute(adapt("INSERT INTO notas_trimestres (alumno_codigo, curso, datos, centro_codigo) VALUES (?,?,?,?)"), (d['codigo_alumno'], d.get('curso',''), json_data, d['centro_codigo']))
+    conn.commit()
+    try: cur.close(); conn.close()
+    except: pass
+    return redirect(f'/alumno/{id}')
+
+@app.route('/alumno/<int:id>/notas')
+def alumno_notas(id):
+    if 'usuario' not in session: return redirect('/login')
+    conn=get_conn(); cur=conn.cursor()
+    cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"), (id,)); r=cur.fetchone()
+    d=dict(r) if isinstance(r,dict) else {'nombre':r[1],'apellidos':r[2],'codigo_alumno':r[10],'curso':r[13]}
+    cur.execute(adapt("SELECT * FROM notas_trimestres WHERE alumno_codigo=?"), (d['codigo_alumno'],)); nt_row=cur.fetchone()
+    cur.execute(adapt("SELECT * FROM selectividad WHERE alumno_codigo=? ORDER BY fase, bloque"), (d['codigo_alumno'],)); sel_rows=cur.fetchall()
+    try: cur.close(); conn.close()
+    except: pass
+    import json
+    html=""
+    if nt_row:
+        nd=dict(nt_row) if isinstance(nt_row,dict) else {'datos':nt_row[3],'curso':nt_row[2]}
+        try:
+            datos=json.loads(nd.get('datos') or '{}')
+            html+=f"<h4>Notas - {nd.get('curso','')}</h4><table class='table table-bordered'><tr><th>Materia</th><th>1er</th><th>2do</th><th>3er</th><th>Junio</th></tr>"
+            for mat,vals in datos.items():
+                def st(v):
+                    try:
+                        if not v: return ""
+                        return "color:red;font-weight:bold" if float(str(v).replace(',','.'))<5 else "color:green;font-weight:bold"
+                    except: return ""
+                html+=f"<tr><td>{mat}</td><td style='{st(vals.get('T1',''))}'>{vals.get('T1','')}</td><td style='{st(vals.get('T2',''))}'>{vals.get('T2','')}</td><td style='{st(vals.get('T3',''))}'>{vals.get('T3','')}</td><td style='{st(vals.get('JUN',''))}'><b>{vals.get('JUN','')}</b></td></tr>"
+            html+="</table>"
+        except: pass
+    if sel_rows:
+        html+="<h4>SELECTIVIDAD - Nota Fase 1 y 2</h4><table class='table table-bordered'><tr><th>Fase</th><th>Asignatura</th><th>Nota Fase 1</th><th>Nota Fase 2</th></tr>"
+        for s in sel_rows:
+            sd=dict(s) if isinstance(s,dict) else {}
+            if sd: n1=sd.get('nota',''); n2=sd.get('nota2','')
+            else: n1=s[4] if len(s)>4 else ''; n2=s[5] if len(s)>5 else ''; sd={'fase':s[2],'asignatura':s[3],'bloque':s[8] if len(s)>8 else ''}
+            html+=f"<tr><td>{sd.get('fase','')}</td><td>{sd.get('bloque','')} - {sd.get('asignatura','')}</td><td style='{nota_color(n1)}'>{n1}</td><td style='{nota_color(n2)}'>{n2}</td></tr>"
+        html+="</table>"
+    if not html: html="<p>Sin notas</p>"
+    return render_template_string(BASE, content=f"<a href='/alumno/{id}' class='btn btn-secondary'>Volver</a> <a href='/dashboard' class='btn btn-warning'>Menu</a> <button onclick='window.print()' class='btn btn-primary'>Imprimir</button><div class='card p-4 mt-3'><h3 class='text-center'>BOLETIN V28.4</h3><p><b>Alumno:</b>{d['nombre']} {d['apellidos']} | <b>Codigo:</b>{d['codigo_alumno']}</p>{html}</div>")
 
 @app.route('/alumno/<int:id>/selectividad')
 def alumno_selectividad(id):
@@ -228,68 +376,81 @@ def selectividad_borrar(sid):
     except: pass
     return redirect('/alumnos')
 
-@app.route('/alumno/<int:id>')
-def alumno_ver(id):
+@app.route('/primaria')
+def primaria():
     if 'usuario' not in session: return redirect('/login')
     conn=get_conn(); cur=conn.cursor()
-    cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"), (id,)); r=cur.fetchone()
-    if not r: return "No encontrado",404
-    d=dict(r) if isinstance(r,dict) else {'id':r[0],'nombre':r[1],'apellidos':r[2],'codigo_alumno':r[10],'centro':r[8],'curso':r[13],'foto':r[11]}
-    cur.execute(adapt("SELECT * FROM notas_trimestres WHERE alumno_codigo=?"), (d['codigo_alumno'],)); nt_row=cur.fetchone()
-    cur.execute(adapt("SELECT * FROM selectividad WHERE alumno_codigo=? ORDER BY fase, bloque"), (d['codigo_alumno'],)); sel_rows=cur.fetchall()
+    cur.execute("SELECT * FROM alumnos_primaria ORDER BY id DESC"); rows=cur.fetchall()
     try: cur.close(); conn.close()
     except: pass
-    qr=gen_qr(f"https://ceacge-final.onrender.com/consulta?codigo={d['codigo_alumno']}")
-    foto_html=f"<img src='/fotos/{d['foto']}' style='width:150px;border-radius:8px' onerror=\"this.style.display='none'\">" if d.get('foto') else "<small>Sin foto</small>"
-    import json
-    datos_trim = {}
-    curso_actual = d.get('curso') or ''
-    if nt_row:
-        nd = dict(nt_row) if isinstance(nt_row,dict) else {'datos':nt_row[3],'curso':nt_row[2]}
-        curso_actual = nd.get('curso') or curso_actual
-        try: datos_trim = json.loads(nd.get('datos') or '{}')
-        except: datos_trim={}
-    materias_curso = PLAN.get(curso_actual) or ["Lengua Espanola","Matematicas","Historia","Ingles"]
-    trim_html = ""
-    for mat in materias_curso:
-        vals = datos_trim.get(mat, {})
-        def _col(v):
-            try:
-                if not v: return ""
-                return "color:#d00000;font-weight:bold;background:#ffe0e0" if float(str(v).replace(',','.'))<5 else "color:#0a7d00;font-weight:bold;background:#e7f3ff"
-            except: return ""
-        trim_html+=f"<tr><td><b>{mat}</b></td><td><input name='T1_{mat}' value='{vals.get('T1','')}' class='form-control form-control-sm' style='{_col(vals.get('T1',''))}'></td><td><input name='T2_{mat}' value='{vals.get('T2','')}' class='form-control form-control-sm' style='{_col(vals.get('T2',''))}'></td><td><input name='T3_{mat}' value='{vals.get('T3','')}' class='form-control form-control-sm' style='{_col(vals.get('T3',''))}'></td><td><input name='JUN_{mat}' value='{vals.get('JUN','')}' class='form-control form-control-sm' style='{_col(vals.get('JUN',''))}'></td></tr>"
-    sel_html=""
-    for s in sel_rows:
-        sd=dict(s) if isinstance(s,dict) else {}
-        if sd: n1=sd.get('nota',''); n2=sd.get('nota2','')
-        else: n1=s[4] if len(s)>4 else ''; n2=s[5] if len(s)>5 else ''; sd={'fase':s[2] if len(s)>2 else '', 'asignatura':s[3] if len(s)>3 else '', 'bloque':s[8] if len(s)>8 else ''}
-        sel_html+=f"<tr><td><b>{sd.get('fase','')}</b><br><small>{sd.get('bloque','')}</small></td><td>{sd.get('asignatura','')}</td><td style='{nota_color(n1)}'>{n1}</td><td style='{nota_color(n2)}'>{n2}</td></tr>"
-    if not sel_html: sel_html="<tr><td colspan=4>Sin notas</td></tr>"
-    return render_template_string(BASE, content=f"<div class='d-flex gap-2 mb-2'><a href='/alumnos' class='btn btn-secondary btn-sm'>Volver Listado</a><a href='/dashboard' class='btn btn-warning btn-sm'>Menu Principal</a><a href='/alumno/{id}/editar' class='btn btn-warning btn-sm'>Editar</a><a href='/alumno/{id}/notas' class='btn btn-primary btn-sm'>Boletin</a><a href='/alumno/{id}/selectividad' class='btn btn-dark btn-sm'>Selectividad</a></div><div class='row'><div class='col-md-8'><h4>{d['nombre']} {d['apellidos']} ({d['codigo_alumno']}) - {curso_actual}</h4><h5>Notas (rojo si &lt;5)</h5><form method='post' action='/alumno/{id}/notas_trimestre/guardar'><table class='table table-bordered table-sm'><tr><th>Materia</th><th>1er</th><th>2do</th><th>3er</th><th>Junio</th></tr>{trim_html}</table><button class='btn btn-success'>Guardar Notas</button></form><hr><h5>Selectividad - Nota Fase 1 y 2</h5><table class='table table-bordered'><tr><th>Fase</th><th>Asignatura</th><th>Nota Fase 1</th><th>Nota Fase 2</th></tr>{sel_html}</table></div><div class='col-md-4 text-center'>{foto_html}<br><br><img src='{qr}' style='width:180px'></div></div>")
+    html="<div class='d-flex justify-content-between'><h4>Primaria <a href='/primaria/nuevo' class='btn btn-sm btn-success'>+ Nuevo</a></h4><a href='/dashboard' class='btn btn-sm btn-secondary'>Menu Principal</a></div><div class='row mt-2'>"
+    for r in rows:
+        d=dict(r) if isinstance(r,dict) else {'id':r[0],'nombre':r[1],'apellidos':r[2],'codigo_alumno':r[4]}
+        html+=f"<div class='col-md-3 mb-3'><div class='card p-2 text-center'><b>{d['nombre']} {d['apellidos']}</b><br><small>{d['codigo_alumno']}</small></div></div>"
+    html+="</div>"
+    return render_template_string(BASE, content=html)
 
-@app.route('/alumno/<int:id>/notas_trimestre/guardar', methods=['POST'])
-def guardar_trimestres(id):
+@app.route('/primaria/nuevo', methods=['GET','POST'])
+def primaria_nuevo():
+    if 'usuario' not in session: return redirect('/login')
+    if request.method=='POST':
+        codigo=request.form.get('codigo_alumno') or gen_codigo("PRI")
+        foto_name=None
+        if 'foto' in request.files:
+            up=request.files['foto']
+            if up.filename:
+                foto_name=secure_filename(f"{codigo}_{up.filename}")
+                up.save(os.path.join(UPLOAD_FOLDER, foto_name))
+        cc=session.get('centro_codigo') if session.get('rol')!='admin' else request.form.get('centro_codigo') or request.form.get('centro')
+        conn=get_conn(); cur=conn.cursor()
+        cur.execute(adapt("INSERT INTO alumnos_primaria (nombre,apellidos,foto,codigo_alumno,centro,anio,centro_codigo) VALUES (?,?,?,?,?,?,?)"), (request.form.get('nombre'),request.form.get('apellidos'),foto_name,codigo,request.form.get('centro'),request.form.get('anio'),cc))
+        conn.commit()
+        try: cur.close(); conn.close()
+        except: pass
+        return redirect('/primaria')
+    extra = "<input name='centro_codigo' placeholder='Codigo centro (admin)' class='form-control mb-2'>" if session.get('rol')=='admin' else ""
+    return render_template_string(BASE, content=f"<a href='/primaria' class='btn btn-sm btn-secondary mb-2'>Volver</a> <a href='/dashboard' class='btn btn-sm btn-warning mb-2'>Menu Principal</a><h4>Nuevo Primaria</h4><form method='post' enctype='multipart/form-data'><input name='nombre' placeholder='Nombre' class='form-control mb-2' required><input name='apellidos' placeholder='Apellidos' class='form-control mb-2' required><input name='centro' placeholder='Centro' class='form-control mb-2'><input name='anio' placeholder='Anio' class='form-control mb-2'><input name='codigo_alumno' placeholder='Codigo auto' class='form-control mb-2'>{extra}<input type='file' name='foto' class='form-control mb-2'><button class='btn btn-success'>Guardar</button></form>")
+
+@app.route('/centros')
+def centros():
     if 'usuario' not in session: return redirect('/login')
     conn=get_conn(); cur=conn.cursor()
-    cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"), (id,)); r=cur.fetchone()
-    d=dict(r) if isinstance(r,dict) else {'codigo_alumno':r[10],'centro_codigo':r[12]}
-    import json
-    datos={}
-    for k,v in request.form.items():
-        if k.startswith(('T1_','T2_','T3_','JUN_')):
-            parts=k.split('_',1); trim=parts[0]; mat=parts[1]
-            if mat not in datos: datos[mat]={}
-            datos[mat][trim]=v.strip()
-    json_data=json.dumps(datos, ensure_ascii=False)
-    cur.execute(adapt("SELECT * FROM notas_trimestres WHERE alumno_codigo=?"), (d['codigo_alumno'],))
-    existe=cur.fetchone()
-    if existe: cur.execute(adapt("UPDATE notas_trimestres SET datos=? WHERE alumno_codigo=?"), (json_data, d['codigo_alumno']))
-    else: cur.execute(adapt("INSERT INTO notas_trimestres (alumno_codigo, curso, datos, centro_codigo) VALUES (?,?,?,?)"), (d['codigo_alumno'], d.get('curso',''), json_data, d['centro_codigo']))
-    conn.commit()
+    cur.execute("SELECT * FROM centros ORDER BY id DESC"); rows=cur.fetchall()
     try: cur.close(); conn.close()
     except: pass
-    return redirect(f'/alumno/{id}')
+    html="<div class='d-flex justify-content-between'><h4>Centros <a href='/centros/nuevo' class='btn btn-sm btn-warning'>+ Nuevo</a></h4><a href='/dashboard' class='btn btn-sm btn-secondary'>Menu Principal</a></div><table class='table mt-2'><tr><th>Nombre</th><th>Codigo</th></tr>"
+    for r in rows:
+        d=dict(r) if isinstance(r,dict) else {'nombre':r[1],'codigo':r[2]}
+        html+=f"<tr><td>{d['nombre']}</td><td>{d['codigo']}</td></tr>"
+    html+="</table>"
+    return render_template_string(BASE, content=html)
+
+@app.route('/centros/nuevo', methods=['GET','POST'])
+def centro_nuevo():
+    if 'usuario' not in session or session.get('rol')!='admin': return "Solo admin",403
+    if request.method=='POST':
+        codigo=request.form.get('codigo') or gen_codigo("CEN")
+        conn=get_conn(); cur=conn.cursor()
+        cur.execute(adapt("INSERT INTO centros (nombre,codigo,localidad,contacto,email) VALUES (?,?,?,?,?)"), (request.form.get('nombre'),codigo,request.form.get('localidad'),request.form.get('contacto'),request.form.get('email')))
+        conn.commit()
+        try: cur.close(); conn.close()
+        except: pass
+        return redirect('/centros')
+    return render_template_string(BASE, content="<a href='/centros' class='btn btn-sm btn-secondary mb-2'>Volver</a> <a href='/dashboard' class='btn btn-sm btn-warning mb-2'>Menu Principal</a><h4>Nuevo Centro</h4><form method='post'><input name='nombre' placeholder='Nombre' class='form-control mb-2' required><input name='codigo' placeholder='Codigo auto' class='form-control mb-2'><input name='localidad' placeholder='Localidad' class='form-control mb-2'><input name='contacto' placeholder='Contacto' class='form-control mb-2'><input name='email' placeholder='Email' class='form-control mb-2'><button class='btn btn-warning'>Guardar</button></form>")
+
+@app.route('/usuarios')
+def usuarios():
+    if 'usuario' not in session or session.get('rol')!='admin': return "Solo admin",403
+    conn=get_conn(); cur=conn.cursor()
+    cur.execute("SELECT * FROM usuarios ORDER BY id"); rows=cur.fetchall()
+    try: cur.close(); conn.close()
+    except: pass
+    html="<div class='d-flex justify-content-between'><h4>Usuarios</h4><a href='/dashboard' class='btn btn-sm btn-secondary'>Menu Principal</a></div><table class='table'><tr><th>Usuario</th><th>Rol</th><th>Centro</th></tr>"
+    for r in rows:
+        d=dict(r) if isinstance(r,dict) else {'usuario':r[1],'rol':r[3],'centro_codigo':r[4]}
+        html+=f"<tr><td>{d['usuario']}</td><td>{d['rol']}</td><td>{d['centro_codigo']}</td></tr>"
+    html+="</table>"
+    return render_template_string(BASE, content=html)
 
 @app.route('/consulta', methods=['GET','POST'])
 def consulta():
@@ -310,15 +471,14 @@ def consulta():
             sel_data=cur.fetchall()
         try: cur.close(); conn.close()
         except: pass
-    content=f"<h3 class='text-center'>Consulta Publica V28.3 - Alumno ve TODO</h3><form method='post' class='d-flex justify-content-center gap-2 mt-4'><input name='codigo' value='{codigo or ''}' placeholder='Codigo Alumno' class='form-control' style='max-width:350px' required><button class='btn btn-primary'>Buscar</button></form>"
+    content=f"<h3 class='text-center'>Consulta Publica V28.4 - TODO</h3><form method='post' class='d-flex justify-content-center gap-2 mt-4'><input name='codigo' value='{codigo or ''}' placeholder='Codigo Alumno' class='form-control' style='max-width:350px' required><button class='btn btn-primary'>Buscar</button></form>"
     if codigo and not alumno: content+=f"<div class='alert alert-danger mt-4 text-center'>Codigo {codigo} no encontrado</div>"
     if alumno:
-        d=dict(alumno) if isinstance(alumno,dict) else {'nombre':alumno[1],'apellidos':alumno[2],'codigo_alumno':alumno[10] if len(alumno)>10 else alumno[4],'centro':alumno[8] if len(alumno)>8 else alumno[5],'foto':alumno[11] if len(alumno)>10 else alumno[3],'curso':alumno[13] if len(alumno)>13 else '', 'lugar_nacimiento':alumno[3] if len(alumno)>10 else '', 'anio':alumno[9] if len(alumno)>10 else ''}
+        d=dict(alumno) if isinstance(alumno,dict) else {'nombre':alumno[1],'apellidos':alumno[2],'codigo_alumno':alumno[10] if len(alumno)>10 else alumno[4],'centro':alumno[8] if len(alumno)>8 else alumno[5],'foto':alumno[11] if len(alumno)>10 else alumno[3],'curso':alumno[13] if len(alumno)>13 else '', 'anio':alumno[9] if len(alumno)>10 else ''}
         foto_url = f"/fotos/{d.get('foto')}" if d.get('foto') else ""
-        foto_html = f"<img src='{foto_url}' style='width:180px;border-radius:10px;border:2px solid #ddd' onerror=\"this.outerHTML='<small>Sin foto / foto no encontrada</small>'\">" if foto_url else "<small>Sin foto</small>"
+        foto_html = f"<img src='{foto_url}' style='width:200px;border-radius:10px;border:2px solid #ddd' onerror=\"this.outerHTML='<div class=text-muted>Foto no disponible en servidor (se borra al reiniciar en Render)</div>'\">" if foto_url else "<small>Sin foto</small>"
         import json
         html=""
-        # Info personal
         html+=f"<div class='mb-3'><b>Nombre:</b> {d.get('nombre')} {d.get('apellidos')}<br><b>Codigo:</b> {d.get('codigo_alumno')} | <b>Centro:</b> {d.get('centro')} | <b>Curso:</b> {d.get('curso')} | <b>Anio:</b> {d.get('anio','')}</div><hr>"
         if nt_data:
             nd=dict(nt_data) if isinstance(nt_data,dict) else {'datos':nt_data[3],'curso':nt_data[2]}
@@ -335,17 +495,15 @@ def consulta():
                 html+="</table>"
             except: pass
         if sel_data:
-            html+="<h5 class='mt-4'>SELECTIVIDAD - 2 FASES (Bachillerato) - Nota Fase 1 y Nota Fase 2</h5><table class='table table-bordered'><tr><th>Fase</th><th>Bloque</th><th>Asignatura</th><th>Nota Fase 1</th><th>Nota Fase 2</th></tr>"
+            html+="<h5 class='mt-4'>SELECTIVIDAD - 2 FASES - Nota Fase 1 y Nota Fase 2</h5><table class='table table-bordered'><tr><th>Fase</th><th>Bloque</th><th>Asignatura</th><th>Nota Fase 1</th><th>Nota Fase 2</th></tr>"
             for s in sel_data:
                 sd=dict(s) if isinstance(s,dict) else {}
                 if sd: n1=sd.get('nota',''); n2=sd.get('nota2',''); fase=sd.get('fase',''); asig=sd.get('asignatura',''); bloque=sd.get('bloque','')
                 else: n1=s[4] if len(s)>4 else ''; n2=s[5] if len(s)>5 else ''; fase=s[2] if len(s)>2 else ''; asig=s[3] if len(s)>3 else ''; bloque=s[8] if len(s)>8 else ''
                 html+=f"<tr><td><b>{fase}</b></td><td>{bloque}</td><td>{asig}</td><td style='{nota_color(n1)}'>{n1}</td><td style='{nota_color(n2)}'>{n2}</td></tr>"
-            html+="</table><p><small style='color:red'>Notas en rojo = suspenso &lt;5 - Notas en verde = aprobado</small></p>"
-        else:
-            html+="<div class='alert alert-warning mt-3'>Este alumno aun no tiene notas de Selectividad cargadas (solo para Bachillerato)</div>"
-        if not html or len(html)<50: html="<div class='alert alert-info'>Aun no tiene notas cargadas</div>"
-        content+=f"<div class='card p-4 mt-4 shadow'><div class='row'><div class='col-md-8'>{html}</div><div class='col-md-4 text-center'><div class='card p-2'><b>Foto del Alumno</b><br><div class='mt-2'>{foto_html}</div></div><br><button onclick='window.print()' class='btn btn-primary w-100'>Imprimir / Guardar PDF</button></div></div></div>"
+            html+="</table><p><small style='color:red'>Rojo = &lt;5, Verde = aprobado</small></p>"
+        if not html or len(html)<100: html+="<div class='alert alert-info'>Aun no tiene notas</div>"
+        content+=f"<div class='card p-4 mt-4 shadow'><div class='row'><div class='col-md-8'>{html}</div><div class='col-md-4 text-center'><div class='card p-2'><b>Foto del Alumno</b><br><div class='mt-2'>{foto_html}</div></div><br><button onclick='window.print()' class='btn btn-primary w-100'>Imprimir / PDF</button></div></div></div>"
     return render_template_string(BASE, content=content)
 
 @app.route('/fotos/<path:filename>')
