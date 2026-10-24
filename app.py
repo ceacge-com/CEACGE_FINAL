@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'CEACGE-V28-12-TODO'
+app.secret_key = 'CEACGE-V28-13-HOJA-ACAD'
 basedir = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = os.path.join(basedir, "fotos")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -38,7 +38,6 @@ def nota_color(n):
         if not s: return ""
         return "color:#d00000;font-weight:bold;background:#ffe0e0" if float(s)<5 else "color:#0a7d00;font-weight:bold;background:#e7f3ff"
     except: return "font-weight:bold"
-
 def get_conn():
     if USE_PG:
         import psycopg2, psycopg2.extras
@@ -104,7 +103,7 @@ def init_db():
         except: pass
 init_db()
 
-BASE="<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>CEACGE</title><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body><nav class='navbar navbar-dark bg-primary'><div class='container'><a class='navbar-brand' href='/dashboard'>CEACGE V28.12</a><div><a href='/dashboard' class='btn btn-sm btn-warning me-2'>Menu</a><a href='/consulta' class='btn btn-sm btn-light me-2'>Consulta</a><span class='text-white me-2'>{{session.usuario}} ({{session.rol}})</span><a href='/logout' class='text-white'>Salir</a></div></div></nav><div class='container mt-4'>{{content|safe}}</div></body></html>"
+BASE="<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>CEACGE</title><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body><nav class='navbar navbar-dark bg-primary'><div class='container'><a class='navbar-brand' href='/dashboard'>CEACGE V28.13</a><div><a href='/dashboard' class='btn btn-sm btn-warning me-2'>Menu</a><a href='/consulta' class='btn btn-sm btn-light me-2'>Consulta</a><span class='text-white me-2'>{{session.usuario}} ({{session.rol}})</span><a href='/logout' class='text-white'>Salir</a></div></div></nav><div class='container mt-4'>{{content|safe}}</div></body></html>"
 
 @app.route('/')
 def index(): return redirect('/dashboard' if 'usuario' in session else '/login')
@@ -125,7 +124,7 @@ def login():
                 session['centro_codigo']=row['centro_codigo'] if isinstance(row,dict) else row[4]
                 return redirect('/dashboard')
         err="Usuario incorrecto"
-    return render_template_string("<html><head><meta charset='utf-8'><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body class='bg-light'><div class='container d-flex justify-content-center align-items-center vh-100'><div class='card p-4' style='width:360px'><h4 class='text-center'>CEACGE V28.12</h4>{% if err %}<div class='alert alert-danger'>{{err}}</div>{% endif %}<form method='post'><input class='form-control mb-2' name='usuario' placeholder='Usuario' required><input class='form-control mb-3' type='password' name='password' placeholder='Pass' required><button class='btn btn-primary w-100'>Entrar</button></form><hr><a href='/consulta' class='btn btn-outline-secondary w-100'>Consulta por Codigo</a></div></div></body></html>", err=err)
+    return render_template_string("<html><head><meta charset='utf-8'><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body class='bg-light'><div class='container d-flex justify-content-center align-items-center vh-100'><div class='card p-4' style='width:360px'><h4 class='text-center'>CEACGE V28.13</h4>{% if err %}<div class='alert alert-danger'>{{err}}</div>{% endif %}<form method='post'><input class='form-control mb-2' name='usuario' placeholder='Usuario' required><input class='form-control mb-3' type='password' name='password' placeholder='Pass' required><button class='btn btn-primary w-100'>Entrar</button></form><hr><a href='/consulta' class='btn btn-outline-secondary w-100'>Consulta por Codigo</a></div></div></body></html>", err=err)
 @app.route('/logout')
 def logout(): session.clear(); return redirect('/login')
 @app.route('/dashboard')
@@ -142,7 +141,6 @@ def dashboard():
         except: pass
     return render_template_string(BASE, content=f"<h3>Panel {session['usuario']}</h3><div class='row g-3 mt-2'><div class='col-md-4'><div class='card p-3'><h5>Secundaria y Bach</h5><h2>{sec}</h2><a href='/alumnos' class='btn btn-primary btn-sm'>Ver</a></div></div><div class='col-md-4'><div class='card p-3'><h5>Primaria</h5><h2>{pri}</h2><a href='/primaria' class='btn btn-success btn-sm'>Ver Primaria</a></div></div><div class='col-md-4'><div class='card p-3'><h5>Centros</h5><h2>{cen}</h2><a href='/centros' class='btn btn-warning btn-sm'>Ver</a></div></div></div><div class='mt-4'><a href='/alumnos/nuevo' class='btn btn-primary'>+ Sec/Bach</a> <a href='/primaria/nuevo' class='btn btn-success'>+ Primaria</a> <a href='/centros/nuevo' class='btn btn-warning'>+ Centro</a> <a href='/usuarios' class='btn btn-dark'>Usuarios</a></div>")
 
-# --- SECUNDARIA ---
 @app.route('/alumnos')
 def alumnos():
     if 'usuario' not in session: return redirect('/login')
@@ -278,7 +276,7 @@ def alumno_ver(id):
     if not hist_html: hist_html="<div class='alert alert-warning'>Sin historial - Añade notas abajo</div>"
     options_anio = "".join([f"<option value='{a}'>{a}</option>" for a in ANIOS_ACADEMICOS])
     form_html = f"<div class='card p-3 mt-4 border-primary'><h5>Añadir Notas Año</h5><form method='post' action='/alumno/{id}/notas_historico/guardar'><select name='anio_academico' class='form-control mb-2'>{options_anio}</select><input name='curso_detalle' class='form-control mb-2' placeholder='Curso'><div id='materiasContainer'></div><button class='btn btn-success mt-2'>Guardar</button></form></div><script>const PLAN={json.dumps(PLAN)};function cargar(){{let s=document.querySelector('select[name=anio_academico]').value;let m=PLAN[s]||[];let h=\"<table class='table table-sm'><tr><th>Materia</th><th>1er</th><th>2do</th><th>3er</th><th>Junio</th></tr>\";m.forEach(x=>{{h+=`<tr><td>${{x}}</td><td><input name='T1_${{x}}' class='form-control form-control-sm'></td><td><input name='T2_${{x}}' class='form-control form-control-sm'></td><td><input name='T3_${{x}}' class='form-control form-control-sm'></td><td><input name='JUN_${{x}}' class='form-control form-control-sm'></td></tr>`}});h+=\"</table>\";document.getElementById('materiasContainer').innerHTML=h}}document.querySelector('select[name=anio_academico]').addEventListener('change',cargar);cargar();</script>"
-    return render_template_string(BASE, content=f"<div class='d-flex gap-2 mb-2'><a href='/alumnos' class='btn btn-secondary btn-sm'>Volver</a><a href='/alumno/{id}/editar' class='btn btn-warning btn-sm'>Editar</a><a href='/alumno/{id}/selectividad' class='btn btn-dark btn-sm'>Selectividad</a><a href='/alumno/{id}/eliminar' class='btn btn-danger btn-sm' onclick=\"return confirm('Eliminar?')\">Eliminar Alumno</a></div><div class='row mt-3'><div class='col-md-8'><h4>{d['nombre']} {d['apellidos']} ({d['codigo_alumno']})</h4>{hist_html}{form_html}</div><div class='col-md-4 text-center'>{foto_html}<br><br><img src='{qr}' style='width:180px'></div></div>")
+    return render_template_string(BASE, content=f"<div class='d-flex gap-2 mb-2 flex-wrap'><a href='/alumnos' class='btn btn-secondary btn-sm'>Volver</a><a href='/alumno/{id}/editar' class='btn btn-warning btn-sm'>Editar</a><a href='/alumno/{id}/selectividad' class='btn btn-dark btn-sm'>Selectividad</a><a href='/alumno/{id}/hoja_academica' target='_blank' class='btn btn-success btn-sm'>📄 Hoja Académica</a><a href='/alumno/{id}/eliminar' class='btn btn-danger btn-sm' onclick=\"return confirm('Eliminar?')\">Eliminar Alumno</a></div><div class='row mt-3'><div class='col-md-8'><h4>{d['nombre']} {d['apellidos']} ({d['codigo_alumno']})</h4>{hist_html}{form_html}</div><div class='col-md-4 text-center'>{foto_html}<br><br><img src='{qr}' style='width:180px'></div></div>")
 
 @app.route('/alumno/<int:id>/notas_historico/guardar', methods=['POST'])
 def guardar_historico(id):
@@ -305,7 +303,7 @@ def guardar_historico(id):
     except: pass
     return redirect(f'/alumno/{id}')
 
-# --- SELECTIVIDAD (igual que V28.10) ---
+# --- SELECTIVIDAD ---
 @app.route('/alumno/<int:id>/selectividad')
 def alumno_selectividad(id):
     if 'usuario' not in session: return redirect('/login')
@@ -358,7 +356,7 @@ def selectividad_borrar(sid):
     except: pass
     return redirect('/alumnos')
 
-# --- PRIMARIA COMPLETO (arregla tu 404) ---
+# --- PRIMARIA ---
 @app.route('/primaria')
 def primaria_list():
     if 'usuario' not in session: return redirect('/login')
@@ -479,7 +477,6 @@ def primaria_eliminar(id):
     except: pass
     return redirect('/primaria')
 
-# --- USUARIOS, CENTROS, CONSULTA ---
 @app.route('/usuarios', methods=['GET','POST'])
 def usuarios():
     if 'usuario' not in session: return redirect('/login')
@@ -550,7 +547,7 @@ def consulta():
                 cur.execute(adapt("SELECT * FROM notas_primaria WHERE alumno_codigo=? ORDER BY anio"), (ad['codigo_alumno'],)); hist_rows=cur.fetchall()
         try: cur.close(); conn.close()
         except: pass
-    content=f"<h3 class='text-center'>Consulta Publica V28.12</h3><form method='post' class='d-flex justify-content-center gap-2 mt-3'><input name='codigo' value='{codigo or ''}' placeholder='Codigo Alumno' class='form-control' style='max-width:350px' required><button class='btn btn-primary'>Buscar</button></form>"
+    content=f"<h3 class='text-center'>Consulta Publica V28.13</h3><form method='post' class='d-flex justify-content-center gap-2 mt-3'><input name='codigo' value='{codigo or ''}' placeholder='Codigo Alumno' class='form-control' style='max-width:350px' required><button class='btn btn-primary'>Buscar</button></form>"
     if codigo and not alumno: content+=f"<div class='alert alert-danger mt-4 text-center'>Codigo {codigo} no encontrado</div>"
     if alumno:
         d=dict(alumno) if isinstance(alumno,dict) else {'nombre':alumno[1],'apellidos':alumno[2],'codigo_alumno':alumno[4] if is_primaria else alumno[10],'centro':alumno[5] if is_primaria else alumno[8], 'curso':alumno[8] if is_primaria and len(alumno)>8 else alumno[13] if len(alumno)>13 else '', 'foto':alumno[3] if is_primaria else alumno[11], 'foto_data':alumno[7] if is_primaria else alumno[15] if len(alumno)>15 else ''}
@@ -561,7 +558,7 @@ def consulta():
         for hr in all_hist:
             h=dict(hr) if isinstance(hr,dict) else {'anio_academico':hr[2] if len(hr)>2 else '', 'curso':hr[2] if len(hr)>2 else '', 'datos':hr[3] if len(hr)>3 else hr[2], 'anio':hr[2] if len(hr)>2 else ''}
             try:
-                datos=json.loads(h.get('datos') or h.get('datos') or '{}')
+                datos=json.loads(h.get('datos') or '{}')
                 if not datos: continue
                 titulo = h.get('anio_academico') or h.get('curso') or h.get('anio') or 'Notas'
                 html_notas+=f"<h5 class='mt-4'>{titulo}</h5><table class='table table-bordered'><tr><th>Materia</th><th>1er</th><th>2do</th><th>3er</th><th>Junio</th></tr>"
@@ -585,8 +582,195 @@ def consulta():
                 else: n1=s[4] if len(s)>4 else ''; n2=s[5] if len(s)>5 else ''; fase=s[2] if len(s)>2 else ''; asig=s[3] if len(s)>3 else ''; bloque=s[8] if len(s)>8 else ''
                 html_notas+=f"<tr><td>{fase}</td><td>{bloque}</td><td>{asig}</td><td style='{nota_color(n1)}'><b>{n1}</b></td><td style='{nota_color(n2)}'><b>{n2}</b></td></tr>"
             html_notas+="</table>"
-        content+=f"<div class='card p-4 mt-4 shadow'>{html_datos}<hr>{html_notas}<div class='text-center mt-4'><button onclick='window.print()' class='btn btn-primary'>Imprimir</button></div></div>"
+        content+=f"<div class='card p-4 mt-4 shadow'>{html_datos}<hr>{html_notas}<div class='text-center mt-4'><button onclick='window.print()' class='btn btn-primary'>Imprimir</button> <a href='/alumno/{id}/hoja_academica' class='btn btn-success'>Ver Hoja Academica Oficial</a></div></div>"
     return render_template_string(BASE, content=content)
+
+# --- NUEVA RUTA HOJA ACADEMICA 100% IGUAL A TU OJA ---
+@app.route('/alumno/<int:id>/hoja_academica')
+def hoja_academica(id):
+    if 'usuario' not in session: return redirect('/login')
+    conn=get_conn(); cur=conn.cursor()
+    cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"), (id,)); r=cur.fetchone()
+    if not r: return "No encontrado",404
+    d=dict(r) if isinstance(r,dict) else {'id':r[0],'nombre':r[1],'apellidos':r[2],'codigo_alumno':r[10],'centro':r[8],'curso':r[13] if len(r)>13 else '','lugar_nacimiento':r[3],'distrito':r[4],'provincia':r[5],'anio':r[9],'foto':r[11],'foto_data':r[15] if len(r)>15 else ''}
+    cur.execute(adapt("SELECT * FROM notas_historico WHERE alumno_codigo=?"), (d['codigo_alumno'],)); hist=cur.fetchall()
+    cur.execute(adapt("SELECT * FROM notas_trimestres WHERE alumno_codigo=?"), (d['codigo_alumno'],)); old=cur.fetchall()
+    try: cur.close(); conn.close()
+    except: pass
+    notas_map = {}
+    for hr in list(hist)+list(old):
+        h=dict(hr) if isinstance(hr,dict) else {'anio_academico':hr[2] if len(hr)>2 else hr[2], 'curso':hr[3] if len(hr)>3 else hr[2], 'datos':hr[4] if len(hr)>4 else hr[3], 'anio':hr[2] if len(hr)>2 else ''}
+        try:
+            datos=json.loads(h.get('datos') or '{}')
+            key = h.get('anio_academico') or h.get('curso') or h.get('anio') or ''
+            if key not in notas_map: notas_map[key] = {}
+            for mat, vals in datos.items():
+                if isinstance(vals, dict):
+                    nota_final = vals.get('JUN') or vals.get('T3') or vals.get('T2') or vals.get('T1') or ''
+                else:
+                    nota_final = str(vals)
+                notas_map[key][mat.strip().lower()] = nota_final
+                notas_map[key][mat] = nota_final
+        except: pass
+    def get_n(curso, materia_buscar):
+        if curso not in notas_map: return ""
+        m = notas_map[curso]
+        for k,v in m.items():
+            if materia_buscar.lower() in k.lower() or k.lower() in materia_buscar.lower():
+                return v
+        return ""
+    foto_html = get_foto_html(d, 100, 125)
+    qr = gen_qr(f"https://ceacge-final.onrender.com/consulta?codigo={d['codigo_alumno']}")
+    html = f"""
+    <html><head><meta charset='utf-8'><title>HOJA ACADEMICA - {d['codigo_alumno']}</title>
+    <style>
+    @page {{ size: A4 landscape; margin: 8mm; }}
+    body {{ font-family: Arial, sans-serif; font-size: 9px; margin:0; }}
+    .borde {{ border: 2px solid black; padding: 5px; }}
+    .header {{ text-align:center; font-weight:bold; line-height:1.2; }}
+    table {{ width:100%; border-collapse: collapse; }}
+    td, th {{ border: 1px solid black; padding: 1px 3px; text-align: center; height: 16px; }}
+    th {{ background:#e0e0e0; font-size:8px; }}
+    .materia {{ text-align:left; font-size:8px; }}
+    .titulo-curso {{ background: black; color: white; font-weight:bold; text-align:center; font-size:9px; }}
+    .foto-box {{ border:1px solid black; width:110px; height:135px; text-align:center; }}
+    .rama {{ background:#d0d0d0; font-weight:bold; text-align:center; font-size:8px; }}
+    @media print {{ .no-print {{ display:none; }} }}
+    </style></head><body>
+    <div class='no-print' style='text-align:center; padding:10px;'><button onclick='window.print()' style='padding:10px 20px; background:#0d6efd; color:white; border:none; border-radius:5px;'>🖨️ IMPRIMIR / GUARDAR PDF</button> <a href='/alumno/{id}' style='padding:10px; background:gray; color:white; text-decoration:none; border-radius:5px;'>Volver</a></div>
+    <div class='borde'>
+        <div class='header'>
+            REPÚBLICA DE GUINEA ECUATORIAL<br>
+            MINISTERIO DE EDUCACIÓN, CIENCIA, ENSEÑANZA UNIVERSITARIA Y PROFESIONAL<br>
+            <div style='display:flex; justify-content:space-between; align-items:center; margin-top:5px;'>
+                <span style='text-align:left; font-weight:normal; font-size:9px;'>NATURAL DE {d.get('lugar_nacimiento','')} , DEL DISTRITO DE {d.get('distrito','')}, PROVINCIA DE {d.get('provincia','')}</span>
+                <span style='font-size:14px; font-weight:bold;'>HOJA ACADÉMICA</span>
+                <span style='font-weight:normal; font-size:9px;'>AÑO ESCOLAR {d.get('anio','')}</span>
+            </div>
+            <div style='text-align:left; margin-top:3px;'>Nombre y Apellidos: <b style='font-size:12px; text-transform:uppercase;'>{d['nombre']} {d['apellidos']}</b> &nbsp;&nbsp; Centro: {d.get('centro','')} &nbsp;&nbsp; Código: {d['codigo_alumno']}</div>
+        </div>
+        <table style='margin-top:5px;'>
+            <tr>
+                <td class='titulo-curso' style='width:20%'>1 ESBA</td>
+                <td class='titulo-curso' style='width:20%'>2 ESBA</td>
+                <td class='titulo-curso' style='width:20%'>3 ESBA</td>
+                <td class='titulo-curso' style='width:20%'>4 ESBA</td>
+                <td class='titulo-curso' style='width:20%'>1 BACH</td>
+            </tr>
+            <tr>
+                <td><table>
+                    <tr><th style='width:70%'>Asignatura</th><th>Nota</th></tr>
+                    <tr><td class='materia'>Lengua Española y Lit</td><td><b>{get_n('1 ESBA','Lengua Española')}</b></td></tr>
+                    <tr><td class='materia'>Matemáticas</td><td><b>{get_n('1 ESBA','Matemáticas')}</b></td></tr>
+                    <tr><td class='materia'>Geografía Gra. Y de GE</td><td><b>{get_n('1 ESBA','Geografía')}</b></td></tr>
+                    <tr><td class='materia'>Ciencias Naturales I</td><td><b>{get_n('1 ESBA','Ciencias Naturales')}</b></td></tr>
+                    <tr><td class='materia'>E. Plástica y Visual I</td><td><b>{get_n('1 ESBA','Plástica')}</b></td></tr>
+                    <tr><td class='materia'>Religión</td><td><b>{get_n('1 ESBA','Religión')}</b></td></tr>
+                    <tr><td class='materia'>Francés</td><td><b>{get_n('1 ESBA','Francés')}</b></td></tr>
+                    <tr><td class='materia'>Inglés</td><td><b>{get_n('1 ESBA','Inglés')}</b></td></tr>
+                    <tr><td class='materia'>E. Física</td><td><b>{get_n('1 ESBA','Física')}</b></td></tr>
+                </table></td>
+                <td><table>
+                    <tr><th>Asignatura</th><th>Nota</th></tr>
+                    <tr><td class='materia'>Lengua Española y Lit</td><td><b>{get_n('2 ESBA','Lengua Española')}</b></td></tr>
+                    <tr><td class='materia'>Matemáticas</td><td><b>{get_n('2 ESBA','Matemáticas')}</b></td></tr>
+                    <tr><td class='materia'>H. de África y de G.E.</td><td><b>{get_n('2 ESBA','África')}</b></td></tr>
+                    <tr><td class='materia'>Biología y Geología</td><td><b>{get_n('2 ESBA','Biología')}</b></td></tr>
+                    <tr><td class='materia'>Tecnología</td><td><b>{get_n('2 ESBA','Tecnología')}</b></td></tr>
+                    <tr><td class='materia'>E. Plástica y Artística I</td><td><b>{get_n('2 ESBA','Plástica')}</b></td></tr>
+                    <tr><td class='materia'>Física y Química</td><td><b>{get_n('2 ESBA','Física')}</b></td></tr>
+                    <tr><td class='materia'>Religión</td><td><b>{get_n('2 ESBA','Religión')}</b></td></tr>
+                    <tr><td class='materia'>Inglés / E. Física</td><td><b>{get_n('2 ESBA','Inglés')}</b></td></tr>
+                </table></td>
+                <td><table>
+                    <tr><th>Asignatura</th><th>Nota</th></tr>
+                    <tr><td class='materia'>Lengua Española y Lit</td><td><b>{get_n('3 ESBA','Lengua Española')}</b></td></tr>
+                    <tr><td class='materia'>Matemáticas</td><td><b>{get_n('3 ESBA','Matemáticas')}</b></td></tr>
+                    <tr><td class='materia'>Geografía Gra. Y de GE</td><td><b>{get_n('3 ESBA','Geografía')}</b></td></tr>
+                    <tr><td class='materia'>Ciencias Naturales I</td><td><b>{get_n('3 ESBA','Ciencias Naturales')}</b></td></tr>
+                    <tr><td class='materia'>E. Plástica y Visual I</td><td><b>{get_n('3 ESBA','Plástica')}</b></td></tr>
+                    <tr><td class='materia'>Religión / Francés</td><td><b>{get_n('3 ESBA','Religión')}</b></td></tr>
+                    <tr><td class='materia'>Francés / Inglés</td><td><b>{get_n('3 ESBA','Francés')}</b></td></tr>
+                    <tr><td class='materia'>Inglés</td><td><b>{get_n('3 ESBA','Inglés')}</b></td></tr>
+                    <tr><td class='materia'>E. Física</td><td><b>{get_n('3 ESBA','Física')}</b></td></tr>
+                </table></td>
+                <td><table>
+                    <tr><th>Asignatura</th><th>Nota</th></tr>
+                    <tr><td class='materia'>Lengua Española y Lit</td><td><b>{get_n('4 ESBA','Lengua Española')}</b></td></tr>
+                    <tr><td class='materia'>Matemáticas</td><td><b>{get_n('4 ESBA','Matemáticas')}</b></td></tr>
+                    <tr><td class='materia'>H. Universal</td><td><b>{get_n('4 ESBA','Universal')}</b></td></tr>
+                    <tr><td class='materia'>Física y Química</td><td><b>{get_n('4 ESBA','Física')}</b></td></tr>
+                    <tr><td class='materia'>Tecnología / Biología</td><td><b>{get_n('4 ESBA','Biología')}</b></td></tr>
+                    <tr><td class='materia'>E. Plástica y Artística</td><td><b>{get_n('4 ESBA','Plástica')}</b></td></tr>
+                    <tr><td class='materia'>Religión / Inglés</td><td><b>{get_n('4 ESBA','Religión')}</b></td></tr>
+                    <tr><td class='materia'>Inglés</td><td><b>{get_n('4 ESBA','Inglés')}</b></td></tr>
+                    <tr><td class='materia'>E. Física</td><td><b>{get_n('4 ESBA','Física')}</b></td></tr>
+                </table></td>
+                <td>
+                    <div style='display:flex; gap:5px;'>
+                        <div style='flex:1'>
+                            <table>
+                                <tr><th>Asignatura</th><th>Nota</th></tr>
+                                <tr><td class='materia'>Lengua Española</td><td><b>{get_n('1 BACH','Lengua Española')}</b></td></tr>
+                                <tr><td class='materia'>H. de África y de G.E.</td><td><b>{get_n('1 BACH','África')}</b></td></tr>
+                                <tr><td class='materia'>Educación Física</td><td><b>{get_n('1 BACH','Física')}</b></td></tr>
+                                <tr><td class='materia'>Religión / Francés</td><td><b>{get_n('1 BACH','Religión')}</b></td></tr>
+                                <tr><td class='materia'>Inglés</td><td><b>{get_n('1 BACH','Inglés')}</b></td></tr>
+                                <tr><td class='materia'>CC. De la Tierra y M.</td><td><b>{get_n('1 BACH','Tierra')}</b></td></tr>
+                                <tr><td class='materia'>Biología / Matemáticas I</td><td><b>{get_n('1 BACH','Biología')}</b></td></tr>
+                                <tr><td class='materia'>Física y Química</td><td><b>{get_n('1 BACH','Física')}</b></td></tr>
+                                <tr><td class='materia'>Dibujo Técnico I</td><td><b>{get_n('1 BACH','Dibujo')}</b></td></tr>
+                            </table>
+                        </div>
+                        <div class='foto-box'>FOTO<br>{foto_html}<br><img src='{qr}' style='width:80px; margin-top:3px;'><br><small style='font-size:7px'>{d['codigo_alumno']}</small></div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class='titulo-curso' colspan=2>1 ESBA - Extra</td>
+                <td class='titulo-curso' colspan=2>2 BACH - COMÚN</td>
+                <td class='titulo-curso'>RAMAS DE 2 BACH</td>
+            </tr>
+            <tr>
+                <td colspan=2>
+                    <table><tr><th>Asignatura</th><th>Nota</th><th>Asignatura</th><th>Nota</th></tr>
+                    <tr><td class='materia'>Biología</td><td><b>{get_n('1 BACH - Ciencias','Biología')}</b></td><td class='materia'>Latín / Griego</td><td><b>{get_n('1 BACH','Latín')}</b></td></tr>
+                    <tr><td class='materia'>Matemáticas I</td><td><b>{get_n('1 BACH','Matemáticas I')}</b></td><td class='materia'>Geografía</td><td><b>{get_n('1 BACH','Geografía')}</b></td></tr>
+                    </table>
+                </td>
+                <td colspan=2>
+                    <table><tr><th>Asignatura</th><th>Nota</th><th>Asignatura</th><th>Nota</th></tr>
+                    <tr><td class='materia'>Lengua Española</td><td><b>{get_n('2 BACH','Lengua Española')}</b></td><td class='materia'>Historia / Filosofía</td><td><b>{get_n('2 BACH','Historia')}</b></td></tr>
+                    <tr><td class='materia'>Historia de la Filosofía</td><td><b>{get_n('2 BACH','Filosofía')}</b></td><td class='materia'>Idioma / Inglés</td><td><b>{get_n('2 BACH','Inglés')}</b></td></tr>
+                    <tr><td class='materia'>Literatura / Religión</td><td><b>{get_n('2 BACH','Literatura')}</b></td><td class='materia'>Francés / Economía</td><td><b>{get_n('2 BACH','Francés')}</b></td></tr>
+                    </table>
+                </td>
+                <td>
+                    <div class='rama'>RAMA CIENCIAS NATURALEZA Y SALUD</div>
+                    <table>
+                    <tr><td class='materia'>Biología</td><td><b>{get_n('2 BACH - Ciencias','Biología')}</b></td><td class='materia'>Química</td><td><b>{get_n('2 BACH - Ciencias','Química')}</b></td></tr>
+                    <tr><td class='materia'>Matemáticas II</td><td><b>{get_n('2 BACH - Ciencias','Matemáticas II')}</b></td><td class='materia'>Física</td><td><b>{get_n('2 BACH - Ciencias','Física')}</b></td></tr>
+                    </table>
+                    <div class='rama'>RAMA HUMANIDADES Y CC SOCIALES</div>
+                    <table>
+                    <tr><td class='materia'>Matemáticas Apl. II</td><td><b>{get_n('2 BACH - Letras','Matemáticas')}</b></td><td class='materia'>Historia Arte</td><td><b>{get_n('2 BACH - Letras','Arte')}</b></td></tr>
+                    <tr><td class='materia'>Latín / Griego</td><td><b>{get_n('2 BACH - Letras','Latín')}</b></td><td class='materia'>Geografía</td><td><b>{get_n('2 BACH - Letras','Geografía')}</b></td></tr>
+                    </table>
+                    <div class='rama'>RAMA TECNOLOGÍA</div>
+                    <table>
+                    <tr><td class='materia'>Matemáticas II</td><td><b>{get_n('2 BACH','Matemáticas II')}</b></td><td class='materia'>Física / Electrotecnia</td><td><b>{get_n('2 BACH','Física')}</b></td></tr>
+                    <tr><td class='materia'>Dibujo Técnico</td><td><b>{get_n('2 BACH','Dibujo')}</b></td><td class='materia'>Química / Tecnología</td><td><b>{get_n('2 BACH','Química')}</b></td></tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+        <div style='margin-top:4px; font-size:7px; text-align:justify; border-top:1px solid black; padding-top:2px;'>
+        Cualquiera que intente falsificar o duplicar este documento académico, estará incurriendo en un delito de "falsificación". Los antecedentes de ésta Hoja Académica, están registrados en una base de Datos Nacional de Guinea Ecuatorial. COD: {d['codigo_alumno']} | Verificación: https://ceacge-final.onrender.com/consulta?codigo={d['codigo_alumno']}
+        </div>
+    </div>
+    </body></html>
+    """
+    return html
 
 @app.route('/fotos/<path:filename>')
 def fotos(filename):
