@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'CEACGE-V28-4-FINAL-TODO'
+app.secret_key = 'CEACGE-V28-5-FINAL'
 basedir = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = os.path.join(basedir, "fotos")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -61,10 +61,12 @@ def init_db():
         if USE_PG:
             cur.execute("CREATE TABLE IF NOT EXISTS usuarios (id SERIAL PRIMARY KEY, usuario TEXT UNIQUE, password TEXT, rol TEXT, centro_codigo TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS centros (id SERIAL PRIMARY KEY, nombre TEXT, codigo TEXT UNIQUE, localidad TEXT, contacto TEXT, email TEXT)")
-            cur.execute("CREATE TABLE IF NOT EXISTS alumnos (id SERIAL PRIMARY KEY, nombre TEXT, apellidos TEXT, lugar_nacimiento TEXT, distrito TEXT, provincia TEXT, telefono TEXT, email TEXT, centro TEXT, anio TEXT, codigo_alumno TEXT UNIQUE, foto TEXT, centro_codigo TEXT, curso TEXT)")
+            cur.execute("CREATE TABLE IF NOT EXISTS alumnos (id SERIAL PRIMARY KEY, nombre TEXT, apellidos TEXT, lugar_nacimiento TEXT, distrito TEXT, provincia TEXT, telefono TEXT, email TEXT, centro TEXT, anio TEXT, codigo_alumno TEXT UNIQUE, foto TEXT, centro_codigo TEXT, curso TEXT, observaciones TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS alumnos_primaria (id SERIAL PRIMARY KEY, nombre TEXT, apellidos TEXT, foto TEXT, codigo_alumno TEXT UNIQUE, centro TEXT, anio TEXT, centro_codigo TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS notas_trimestres (id SERIAL PRIMARY KEY, alumno_codigo TEXT UNIQUE, curso TEXT, datos TEXT, centro_codigo TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS selectividad (id SERIAL PRIMARY KEY, alumno_codigo TEXT, fase TEXT, asignatura TEXT, nota TEXT, nota2 TEXT, convocatoria TEXT, centro_codigo TEXT, bloque TEXT)")
+            try: cur.execute("ALTER TABLE alumnos ADD COLUMN IF NOT EXISTS observaciones TEXT")
+            except: pass
             try: cur.execute("ALTER TABLE selectividad ADD COLUMN IF NOT EXISTS bloque TEXT")
             except: pass
             try: cur.execute("ALTER TABLE selectividad ADD COLUMN IF NOT EXISTS nota2 TEXT")
@@ -72,10 +74,12 @@ def init_db():
         else:
             cur.execute("CREATE TABLE IF NOT EXISTS usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario TEXT UNIQUE, password TEXT, rol TEXT, centro_codigo TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS centros (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, codigo TEXT UNIQUE, localidad TEXT, contacto TEXT, email TEXT)")
-            cur.execute("CREATE TABLE IF NOT EXISTS alumnos (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, apellidos TEXT, lugar_nacimiento TEXT, distrito TEXT, provincia TEXT, telefono TEXT, email TEXT, centro TEXT, anio TEXT, codigo_alumno TEXT UNIQUE, foto TEXT, centro_codigo TEXT, curso TEXT)")
+            cur.execute("CREATE TABLE IF NOT EXISTS alumnos (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, apellidos TEXT, lugar_nacimiento TEXT, distrito TEXT, provincia TEXT, telefono TEXT, email TEXT, centro TEXT, anio TEXT, codigo_alumno TEXT UNIQUE, foto TEXT, centro_codigo TEXT, curso TEXT, observaciones TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS alumnos_primaria (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, apellidos TEXT, foto TEXT, codigo_alumno TEXT UNIQUE, centro TEXT, anio TEXT, centro_codigo TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS notas_trimestres (id INTEGER PRIMARY KEY AUTOINCREMENT, alumno_codigo TEXT UNIQUE, curso TEXT, datos TEXT, centro_codigo TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS selectividad (id INTEGER PRIMARY KEY AUTOINCREMENT, alumno_codigo TEXT, fase TEXT, asignatura TEXT, nota TEXT, nota2 TEXT, convocatoria TEXT, centro_codigo TEXT, bloque TEXT)")
+            try: cur.execute("ALTER TABLE alumnos ADD COLUMN observaciones TEXT")
+            except: pass
             try: cur.execute("ALTER TABLE selectividad ADD COLUMN bloque TEXT")
             except: pass
             try: cur.execute("ALTER TABLE selectividad ADD COLUMN nota2 TEXT")
@@ -90,7 +94,7 @@ def init_db():
         except: pass
 init_db()
 
-BASE="<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>CEACGE</title><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body><nav class='navbar navbar-dark bg-primary'><div class='container'><a class='navbar-brand' href='/dashboard'>CEACGE V28.4</a><div><a href='/dashboard' class='btn btn-sm btn-warning me-2'>Menu</a><a href='/consulta' class='btn btn-sm btn-light me-2'>Consulta</a><span class='text-white me-2'>{{session.usuario}} ({{session.rol}})</span><a href='/logout' class='text-white'>Salir</a></div></div></nav><div class='container mt-4'>{{content|safe}}</div></body></html>"
+BASE="<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>CEACGE</title><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body><nav class='navbar navbar-dark bg-primary'><div class='container'><a class='navbar-brand' href='/dashboard'>CEACGE V28.5</a><div><a href='/dashboard' class='btn btn-sm btn-warning me-2'>Menu</a><a href='/consulta' class='btn btn-sm btn-light me-2'>Consulta</a><span class='text-white me-2'>{{session.usuario}} ({{session.rol}})</span><a href='/logout' class='text-white'>Salir</a></div></div></nav><div class='container mt-4'>{{content|safe}}</div></body></html>"
 
 @app.route('/')
 def index(): return redirect('/dashboard' if 'usuario' in session else '/login')
@@ -111,7 +115,7 @@ def login():
                 session['centro_codigo']=row['centro_codigo'] if isinstance(row,dict) else row[4]
                 return redirect('/dashboard')
         err="Usuario incorrecto"
-    return render_template_string("<html><head><meta charset='utf-8'><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body class='bg-light'><div class='container d-flex justify-content-center align-items-center vh-100'><div class='card p-4' style='width:360px'><h4 class='text-center'>CEACGE V28.4</h4>{% if err %}<div class='alert alert-danger'>{{err}}</div>{% endif %}<form method='post'><input class='form-control mb-2' name='usuario' placeholder='Usuario' required><input class='form-control mb-3' type='password' name='password' placeholder='Pass' required><button class='btn btn-primary w-100'>Entrar</button></form><hr><a href='/consulta' class='btn btn-outline-secondary w-100'>Consulta por Codigo</a></div></div></body></html>", err=err)
+    return render_template_string("<html><head><meta charset='utf-8'><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body class='bg-light'><div class='container d-flex justify-content-center align-items-center vh-100'><div class='card p-4' style='width:360px'><h4 class='text-center'>CEACGE V28.5</h4>{% if err %}<div class='alert alert-danger'>{{err}}</div>{% endif %}<form method='post'><input class='form-control mb-2' name='usuario' placeholder='Usuario' required><input class='form-control mb-3' type='password' name='password' placeholder='Pass' required><button class='btn btn-primary w-100'>Entrar</button></form><hr><a href='/consulta' class='btn btn-outline-secondary w-100'>Consulta por Codigo</a></div></div></body></html>", err=err)
 @app.route('/logout')
 def logout(): session.clear(); return redirect('/login')
 
@@ -157,17 +161,39 @@ def alumno_nuevo():
         cc=session.get('centro_codigo') if session.get('rol')!='admin' else f.get('centro_codigo') or f.get('centro')
         conn=get_conn(); cur=conn.cursor()
         try:
-            cur.execute(adapt("INSERT INTO alumnos (nombre,apellidos,lugar_nacimiento,distrito,provincia,telefono,email,centro,anio,codigo_alumno,foto,centro_codigo,curso) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"), (f.get('nombre'),f.get('apellidos'),f.get('lugar_nacimiento'),f.get('distrito'),f.get('provincia'),f.get('telefono'),f.get('email'),f.get('centro'),f.get('anio'),codigo,foto_name,cc,f.get('curso')))
+            cur.execute(adapt("INSERT INTO alumnos (nombre,apellidos,lugar_nacimiento,distrito,provincia,telefono,email,centro,anio,codigo_alumno,foto,centro_codigo,curso,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"), (f.get('nombre'),f.get('apellidos'),f.get('lugar_nacimiento'),f.get('distrito'),f.get('provincia'),f.get('telefono'),f.get('email'),f.get('centro'),f.get('anio'),codigo,foto_name,cc,f.get('curso'),f.get('observaciones')))
             conn.commit()
-        except:
+        except Exception as e:
+            print(e)
             codigo=gen_codigo("SEC")
-            cur.execute(adapt("INSERT INTO alumnos (nombre,apellidos,lugar_nacimiento,distrito,provincia,telefono,email,centro,anio,codigo_alumno,foto,centro_codigo,curso) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"), (f.get('nombre'),f.get('apellidos'),f.get('lugar_nacimiento'),f.get('distrito'),f.get('provincia'),f.get('telefono'),f.get('email'),f.get('centro'),f.get('anio'),codigo,foto_name,cc,f.get('curso')))
+            cur.execute(adapt("INSERT INTO alumnos (nombre,apellidos,lugar_nacimiento,distrito,provincia,telefono,email,centro,anio,codigo_alumno,foto,centro_codigo,curso,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"), (f.get('nombre'),f.get('apellidos'),f.get('lugar_nacimiento'),f.get('distrito'),f.get('provincia'),f.get('telefono'),f.get('email'),f.get('centro'),f.get('anio'),codigo,foto_name,cc,f.get('curso'),f.get('observaciones')))
             conn.commit()
         try: cur.close(); conn.close()
         except: pass
         return redirect('/alumnos')
     extra = "<input name='centro_codigo' placeholder='Codigo centro (admin)' class='form-control mb-2'>" if session.get('rol')=='admin' else ""
-    return render_template_string(BASE, content=f"<a href='/alumnos' class='btn btn-sm btn-secondary mb-2'>Volver</a> <a href='/dashboard' class='btn btn-sm btn-warning mb-2'>Menu Principal</a><h4>Nuevo Sec/Bach</h4><form method='post' enctype='multipart/form-data' class='row g-2'><div class='col-md-6'><input name='nombre' placeholder='Nombre' class='form-control' required></div><div class='col-md-6'><input name='apellidos' placeholder='Apellidos' class='form-control' required></div><div class='col-md-4'><input name='curso' placeholder='Ej: 2 BACH - Ciencias' class='form-control'></div><div class='col-md-4'><input name='centro' placeholder='Centro' class='form-control'></div><div class='col-md-4'><input name='codigo_alumno' placeholder='Codigo auto' class='form-control'></div><div class='col-md-4'>{extra}</div><div class='col-md-4'><input type='file' name='foto' class='form-control'></div><div class='col-12'><button class='btn btn-primary'>Guardar</button></div></form>")
+    return render_template_string(BASE, content=f"""
+<a href='/alumnos' class='btn btn-sm btn-secondary mb-2'>Volver</a> <a href='/dashboard' class='btn btn-sm btn-warning mb-2'>Menu Principal</a>
+<h4>Nuevo Sec/Bach - ESBA y Bachillerato - V28.5</h4>
+<div class='alert alert-info py-2'><small>Campos completos para ESBA y Bachillerato: Lugar nacimiento, distrito, provincia, contacto, email y observaciones</small></div>
+<form method='post' enctype='multipart/form-data' class='row g-2'>
+<div class='col-md-6'><label>Nombre *</label><input name='nombre' placeholder='Nombre' class='form-control' required></div>
+<div class='col-md-6'><label>Apellidos *</label><input name='apellidos' placeholder='Apellidos' class='form-control' required></div>
+<div class='col-md-4'><label>Lugar de nacimiento</label><input name='lugar_nacimiento' placeholder='Ej: Bata, Malabo...' class='form-control'></div>
+<div class='col-md-4'><label>Distrito</label><input name='distrito' placeholder='Ej: Litoral...' class='form-control'></div>
+<div class='col-md-4'><label>Provincia</label><input name='provincia' placeholder='Ej: Litoral, Bioko...' class='form-control'></div>
+<div class='col-md-4'><label>Contacto / Telefono</label><input name='telefono' placeholder='Ej: 222...' class='form-control'></div>
+<div class='col-md-4'><label>Email</label><input name='email' placeholder='Email alumno' type='email' class='form-control'></div>
+<div class='col-md-4'><label>Curso</label><select name='curso' class='form-control'><option value=''>Elige curso</option><option>1 ESBA</option><option>2 ESBA</option><option>3 ESBA</option><option>4 ESBA</option><option>1 BACH - Ciencias</option><option>1 BACH - Letras</option><option>1 BACH - Tecnico</option><option>2 BACH - Ciencias</option><option>2 BACH - Letras</option><option>2 BACH - Tecnico</option></select></div>
+<div class='col-md-4'><label>Centro</label><input name='centro' placeholder='Centro' class='form-control'></div>
+<div class='col-md-2'><label>Año academico</label><input name='anio' placeholder='2024-2025' class='form-control'></div>
+<div class='col-md-3'><label>Codigo alumno (auto)</label><input name='codigo_alumno' placeholder='Deja en blanco para auto' class='form-control'></div>
+<div class='col-md-3'><label>{extra}</label></div>
+<div class='col-md-12'><label>Observaciones del centro</label><textarea name='observaciones' placeholder='Observaciones, conducta, situacion familiar, etc.' class='form-control' rows='2'></textarea></div>
+<div class='col-md-6'><label>Foto del alumno</label><input type='file' name='foto' class='form-control'></div>
+<div class='col-12 mt-3'><button class='btn btn-primary'>Guardar Alumno</button></div>
+</form>
+""")
 
 @app.route('/alumno/<int:id>/editar', methods=['GET','POST'])
 def alumno_editar(id):
@@ -178,17 +204,35 @@ def alumno_editar(id):
         try: cur.close(); conn.close()
         except: pass
         return "No encontrado",404
-    d=dict(r) if isinstance(r,dict) else {'id':r[0],'nombre':r[1],'apellidos':r[2],'lugar_nacimiento':r[3],'distrito':r[4],'provincia':r[5],'telefono':r[6],'email':r[7],'centro':r[8],'anio':r[9],'codigo_alumno':r[10],'foto':r[11],'centro_codigo':r[12],'curso':r[13]}
+    d=dict(r) if isinstance(r,dict) else {'id':r[0],'nombre':r[1],'apellidos':r[2],'lugar_nacimiento':r[3],'distrito':r[4],'provincia':r[5],'telefono':r[6],'email':r[7],'centro':r[8],'anio':r[9],'codigo_alumno':r[10],'foto':r[11],'centro_codigo':r[12],'curso':r[13],'observaciones':r[14] if len(r)>14 else ''}
     if request.method=='POST':
         f=request.form
-        cur.execute(adapt("UPDATE alumnos SET nombre=?, apellidos=?, lugar_nacimiento=?, distrito=?, provincia=?, telefono=?, email=?, centro=?, anio=?, curso=?, centro_codigo=? WHERE id=?"), (f.get('nombre'),f.get('apellidos'),f.get('lugar_nacimiento'),f.get('distrito'),f.get('provincia'),f.get('telefono'),f.get('email'),f.get('centro'),f.get('anio'),f.get('curso'),f.get('centro_codigo') or d['centro_codigo'], id))
+        cur.execute(adapt("UPDATE alumnos SET nombre=?, apellidos=?, lugar_nacimiento=?, distrito=?, provincia=?, telefono=?, email=?, centro=?, anio=?, curso=?, centro_codigo=?, observaciones=? WHERE id=?"), (f.get('nombre'),f.get('apellidos'),f.get('lugar_nacimiento'),f.get('distrito'),f.get('provincia'),f.get('telefono'),f.get('email'),f.get('centro'),f.get('anio'),f.get('curso'),f.get('centro_codigo') or d['centro_codigo'], f.get('observaciones'), id))
         conn.commit()
         try: cur.close(); conn.close()
         except: pass
         return redirect(f'/alumno/{id}')
     try: cur.close(); conn.close()
     except: pass
-    return render_template_string(BASE, content=f"<a href='/alumnos' class='btn btn-sm btn-secondary mb-2'>Volver al listado</a> <a href='/dashboard' class='btn btn-sm btn-warning mb-2'>Menu Principal</a><h4>Editar Alumno {d['codigo_alumno']}</h4><form method='post' class='row g-2'><div class='col-md-6'><label>Nombre</label><input name='nombre' value='{d.get('nombre','')}' class='form-control' required></div><div class='col-md-6'><label>Apellidos</label><input name='apellidos' value='{d.get('apellidos','')}' class='form-control' required></div><div class='col-md-4'><label>Lugar Nacimiento</label><input name='lugar_nacimiento' value='{d.get('lugar_nacimiento','')}' class='form-control'></div><div class='col-md-4'><label>Distrito</label><input name='distrito' value='{d.get('distrito','')}' class='form-control'></div><div class='col-md-4'><label>Provincia</label><input name='provincia' value='{d.get('provincia','')}' class='form-control'></div><div class='col-md-4'><label>Telefono</label><input name='telefono' value='{d.get('telefono','')}' class='form-control'></div><div class='col-md-4'><label>Email</label><input name='email' value='{d.get('email','')}' class='form-control'></div><div class='col-md-4'><label>Curso</label><input name='curso' value='{d.get('curso','')}' class='form-control'></div><div class='col-md-4'><label>Centro</label><input name='centro' value='{d.get('centro','')}' class='form-control'></div><div class='col-md-4'><label>Anio</label><input name='anio' value='{d.get('anio','')}' class='form-control'></div><div class='col-md-4'><label>Codigo Centro</label><input name='centro_codigo' value='{d.get('centro_codigo','')}' class='form-control'></div><div class='col-12'><button class='btn btn-success'>Guardar Cambios</button> <a href='/alumno/{id}' class='btn btn-secondary'>Cancelar</a></div></form>")
+    return render_template_string(BASE, content=f"""
+<a href='/alumnos' class='btn btn-sm btn-secondary mb-2'>Volver al listado</a> <a href='/dashboard' class='btn btn-sm btn-warning mb-2'>Menu Principal</a>
+<h4>Editar Alumno ESBA/Bach {d['codigo_alumno']}</h4>
+<form method='post' class='row g-2'>
+<div class='col-md-6'><label>Nombre</label><input name='nombre' value='{d.get('nombre','')}' class='form-control' required></div>
+<div class='col-md-6'><label>Apellidos</label><input name='apellidos' value='{d.get('apellidos','')}' class='form-control' required></div>
+<div class='col-md-4'><label>Lugar de nacimiento</label><input name='lugar_nacimiento' value='{d.get('lugar_nacimiento','')}' class='form-control'></div>
+<div class='col-md-4'><label>Distrito</label><input name='distrito' value='{d.get('distrito','')}' class='form-control'></div>
+<div class='col-md-4'><label>Provincia</label><input name='provincia' value='{d.get('provincia','')}' class='form-control'></div>
+<div class='col-md-4'><label>Contacto / Telefono</label><input name='telefono' value='{d.get('telefono','')}' class='form-control'></div>
+<div class='col-md-4'><label>Email</label><input name='email' value='{d.get('email','')}' class='form-control'></div>
+<div class='col-md-4'><label>Curso</label><input name='curso' value='{d.get('curso','')}' class='form-control'></div>
+<div class='col-md-4'><label>Centro</label><input name='centro' value='{d.get('centro','')}' class='form-control'></div>
+<div class='col-md-4'><label>Anio</label><input name='anio' value='{d.get('anio','')}' class='form-control'></div>
+<div class='col-md-4'><label>Codigo Centro</label><input name='centro_codigo' value='{d.get('centro_codigo','')}' class='form-control'></div>
+<div class='col-12'><label>Observaciones del centro</label><textarea name='observaciones' class='form-control' rows='3'>{d.get('observaciones','')}</textarea></div>
+<div class='col-12'><button class='btn btn-success'>Guardar Cambios</button> <a href='/alumno/{id}' class='btn btn-secondary'>Cancelar</a></div>
+</form>
+""")
 
 @app.route('/alumno/<int:id>')
 def alumno_ver(id):
@@ -196,7 +240,7 @@ def alumno_ver(id):
     conn=get_conn(); cur=conn.cursor()
     cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"), (id,)); r=cur.fetchone()
     if not r: return "No encontrado",404
-    d=dict(r) if isinstance(r,dict) else {'id':r[0],'nombre':r[1],'apellidos':r[2],'codigo_alumno':r[10],'centro':r[8],'curso':r[13],'foto':r[11]}
+    d=dict(r) if isinstance(r,dict) else {'id':r[0],'nombre':r[1],'apellidos':r[2],'lugar_nacimiento':r[3],'distrito':r[4],'provincia':r[5],'telefono':r[6],'email':r[7],'centro':r[8],'anio':r[9],'codigo_alumno':r[10],'foto':r[11],'centro_codigo':r[12],'curso':r[13],'observaciones':r[14] if len(r)>14 else ''}
     cur.execute(adapt("SELECT * FROM notas_trimestres WHERE alumno_codigo=?"), (d['codigo_alumno'],)); nt_row=cur.fetchone()
     cur.execute(adapt("SELECT * FROM selectividad WHERE alumno_codigo=? ORDER BY fase, bloque"), (d['codigo_alumno'],)); sel_rows=cur.fetchall()
     try: cur.close(); conn.close()
@@ -228,7 +272,23 @@ def alumno_ver(id):
         else: n1=s[4] if len(s)>4 else ''; n2=s[5] if len(s)>5 else ''; sd={'fase':s[2] if len(s)>2 else '', 'asignatura':s[3] if len(s)>3 else '', 'bloque':s[8] if len(s)>8 else ''}
         sel_html+=f"<tr><td><b>{sd.get('fase','')}</b><br><small>{sd.get('bloque','')}</small></td><td>{sd.get('asignatura','')}</td><td style='{nota_color(n1)}'>{n1}</td><td style='{nota_color(n2)}'>{n2}</td></tr>"
     if not sel_html: sel_html="<tr><td colspan=4>Sin notas de Selectividad</td></tr>"
-    return render_template_string(BASE, content=f"<div class='d-flex gap-2 mb-2'><a href='/alumnos' class='btn btn-secondary btn-sm'>Volver Listado</a><a href='/dashboard' class='btn btn-warning btn-sm'>Menu Principal</a><a href='/alumno/{id}/editar' class='btn btn-warning btn-sm'>Editar Datos</a><a href='/alumno/{id}/notas' class='btn btn-primary btn-sm'>Ver Boletin</a><a href='/alumno/{id}/selectividad' class='btn btn-dark btn-sm'>Selectividad</a></div><div class='row'><div class='col-md-8'><h4>{d['nombre']} {d['apellidos']} <small>({d['codigo_alumno']})</small></h4><p>Centro:{d.get('centro')} Curso:<b>{d.get('curso')}</b></p><h5>Notas Trimestrales (rojo si &lt;5)</h5><form method='post' action='/alumno/{id}/notas_trimestre/guardar'><table class='table table-bordered table-sm'><tr><th>Materia</th><th>1er Trim</th><th>2do Trim</th><th>3er Trim</th><th>Junio Final</th></tr>{trim_html}</table><button class='btn btn-success'>Guardar Notas Trimestrales</button></form><hr><h5>Selectividad - Nota Fase 1 y Fase 2</h5><table class='table'><tr><th>Fase</th><th>Asignatura</th><th>Nota Fase 1</th><th>Nota Fase 2</th></tr>{sel_html}</table></div><div class='col-md-4 text-center'>{foto_html}<br><br><div class='card p-2'><b>QR</b><br><img src='{qr}' style='width:180px'></div></div></div>")
+    return render_template_string(BASE, content=f"""
+<div class='d-flex gap-2 mb-2'><a href='/alumnos' class='btn btn-secondary btn-sm'>Volver Listado</a><a href='/dashboard' class='btn btn-warning btn-sm'>Menu Principal</a><a href='/alumno/{id}/editar' class='btn btn-warning btn-sm'>Editar Datos</a><a href='/alumno/{id}/notas' class='btn btn-primary btn-sm'>Ver Boletin</a><a href='/alumno/{id}/selectividad' class='btn btn-dark btn-sm'>Selectividad</a></div>
+<div class='row'>
+<div class='col-md-8'>
+<h4>{d['nombre']} {d['apellidos']} <small>({d['codigo_alumno']})</small></h4>
+<div class='card p-3 mb-3 bg-light'>
+<div class='row'><div class='col-md-6'><b>Lugar nacimiento:</b> {d.get('lugar_nacimiento','')}<br><b>Distrito:</b> {d.get('distrito','')}<br><b>Provincia:</b> {d.get('provincia','')}</div>
+<div class='col-md-6'><b>Contacto:</b> {d.get('telefono','')}<br><b>Email:</b> {d.get('email','')}<br><b>Centro:</b> {d.get('centro')} ({d.get('centro_codigo','')})<br><b>Curso:</b> {d.get('curso')} | <b>Año:</b> {d.get('anio','')}</div>
+<div class='col-12 mt-2'><b>Observaciones:</b> {d.get('observaciones','')}</div></div>
+</div>
+<h5>Notas Trimestrales (rojo si &lt;5)</h5>
+<form method='post' action='/alumno/{id}/notas_trimestre/guardar'><table class='table table-bordered table-sm'><tr><th>Materia</th><th>1er Trim</th><th>2do Trim</th><th>3er Trim</th><th>Junio Final</th></tr>{trim_html}</table><button class='btn btn-success'>Guardar Notas Trimestrales</button></form>
+<hr><h5>Selectividad - Nota Fase 1 y Fase 2</h5><table class='table'><tr><th>Fase</th><th>Asignatura</th><th>Nota Fase 1</th><th>Nota Fase 2</th></tr>{sel_html}</table>
+</div>
+<div class='col-md-4 text-center'>{foto_html}<br><br><div class='card p-2'><b>QR</b><br><img src='{qr}' style='width:180px'></div></div>
+</div>
+""")
 
 @app.route('/alumno/<int:id>/notas_trimestre/guardar', methods=['POST'])
 def guardar_trimestres(id):
@@ -247,7 +307,7 @@ def guardar_trimestres(id):
     cur.execute(adapt("SELECT * FROM notas_trimestres WHERE alumno_codigo=?"), (d['codigo_alumno'],))
     existe=cur.fetchone()
     if existe: cur.execute(adapt("UPDATE notas_trimestres SET datos=? WHERE alumno_codigo=?"), (json_data, d['codigo_alumno']))
-    else: cur.execute(adapt("INSERT INTO notas_trimestres (alumno_codigo, curso, datos, centro_codigo) VALUES (?,?,?,?)"), (d['codigo_alumno'], d.get('curso',''), json_data, d['centro_codigo']))
+    else: cur.execute(adapt("INSERT INTO notas_trimestres (alumno_codigo, curso, datos, centro_codigo) VALUES (?,?,?,?)"), (d['codigo_alumno'], '', json_data, d['centro_codigo']))
     conn.commit()
     try: cur.close(); conn.close()
     except: pass
@@ -258,7 +318,7 @@ def alumno_notas(id):
     if 'usuario' not in session: return redirect('/login')
     conn=get_conn(); cur=conn.cursor()
     cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"), (id,)); r=cur.fetchone()
-    d=dict(r) if isinstance(r,dict) else {'nombre':r[1],'apellidos':r[2],'codigo_alumno':r[10],'curso':r[13]}
+    d=dict(r) if isinstance(r,dict) else {'nombre':r[1],'apellidos':r[2],'codigo_alumno':r[10],'curso':r[13],'lugar_nacimiento':r[3],'distrito':r[4],'provincia':r[5],'telefono':r[6],'email':r[7],'centro':r[8],'observaciones':r[14] if len(r)>14 else ''}
     cur.execute(adapt("SELECT * FROM notas_trimestres WHERE alumno_codigo=?"), (d['codigo_alumno'],)); nt_row=cur.fetchone()
     cur.execute(adapt("SELECT * FROM selectividad WHERE alumno_codigo=? ORDER BY fase, bloque"), (d['codigo_alumno'],)); sel_rows=cur.fetchall()
     try: cur.close(); conn.close()
@@ -288,7 +348,7 @@ def alumno_notas(id):
             html+=f"<tr><td>{sd.get('fase','')}</td><td>{sd.get('bloque','')} - {sd.get('asignatura','')}</td><td style='{nota_color(n1)}'>{n1}</td><td style='{nota_color(n2)}'>{n2}</td></tr>"
         html+="</table>"
     if not html: html="<p>Sin notas</p>"
-    return render_template_string(BASE, content=f"<a href='/alumno/{id}' class='btn btn-secondary'>Volver</a> <a href='/dashboard' class='btn btn-warning'>Menu</a> <button onclick='window.print()' class='btn btn-primary'>Imprimir</button><div class='card p-4 mt-3'><h3 class='text-center'>BOLETIN V28.4</h3><p><b>Alumno:</b>{d['nombre']} {d['apellidos']} | <b>Codigo:</b>{d['codigo_alumno']}</p>{html}</div>")
+    return render_template_string(BASE, content=f"<a href='/alumno/{id}' class='btn btn-secondary'>Volver</a> <a href='/dashboard' class='btn btn-warning'>Menu</a> <button onclick='window.print()' class='btn btn-primary'>Imprimir</button><div class='card p-4 mt-3'><h3 class='text-center'>BOLETIN V28.5</h3><p><b>Alumno:</b>{d['nombre']} {d['apellidos']} | <b>Codigo:</b>{d['codigo_alumno']}<br><b>Lugar Nac:</b>{d.get('lugar_nacimiento','')} | <b>Distrito:</b>{d.get('distrito','')} | <b>Provincia:</b>{d.get('provincia','')}<br><b>Contacto:</b>{d.get('telefono','')} | <b>Email:</b>{d.get('email','')} | <b>Observ:</b>{d.get('observaciones','')}</p>{html}</div>")
 
 @app.route('/alumno/<int:id>/selectividad')
 def alumno_selectividad(id):
@@ -311,7 +371,7 @@ def alumno_selectividad(id):
 <a href='/alumno/{id}' class='btn btn-secondary btn-sm'>Volver a Ficha</a> <a href='/dashboard' class='btn btn-warning btn-sm'>Menu Principal</a>
 <h4 class='mt-3'>Selectividad - {d['nombre']} {d['apellidos']} ({d['codigo_alumno']})</h4>
 <div class='alert alert-info py-2'><small><b>Fase General:</b> Lengua Espanola, Historia, Historia de la Filosofia, Idioma.<br>
-<b>Fase Especial - 3 Bloques:</b> BLOQUE 1: LITERATURA Y CCSS, BLOQUE 2: CIENCIAS Y TECNOLOGIA, BLOQUE 3: NATURALEZA Y SALUD<br>
+<b>Fase Especial - 3 Bloques:</b> BLOQUE 1, BLOQUE 2, BLOQUE 3<br>
 <span style='color:red;font-weight:bold'>Notas inferiores a 5 en ROJO - Nota Fase 1 y Nota Fase 2</span></small></div>
 <div class='card p-3 mt-3'>
 <table class='table table-bordered'><tr><th>Fase</th><th>Asignatura</th><th>Nota Fase 1</th><th>Nota Fase 2</th><th></th></tr>{html_rows}</table>
@@ -471,15 +531,15 @@ def consulta():
             sel_data=cur.fetchall()
         try: cur.close(); conn.close()
         except: pass
-    content=f"<h3 class='text-center'>Consulta Publica V28.4 - TODO</h3><form method='post' class='d-flex justify-content-center gap-2 mt-4'><input name='codigo' value='{codigo or ''}' placeholder='Codigo Alumno' class='form-control' style='max-width:350px' required><button class='btn btn-primary'>Buscar</button></form>"
+    content=f"<h3 class='text-center'>Consulta Publica V28.5 - TODO</h3><form method='post' class='d-flex justify-content-center gap-2 mt-4'><input name='codigo' value='{codigo or ''}' placeholder='Codigo Alumno' class='form-control' style='max-width:350px' required><button class='btn btn-primary'>Buscar</button></form>"
     if codigo and not alumno: content+=f"<div class='alert alert-danger mt-4 text-center'>Codigo {codigo} no encontrado</div>"
     if alumno:
-        d=dict(alumno) if isinstance(alumno,dict) else {'nombre':alumno[1],'apellidos':alumno[2],'codigo_alumno':alumno[10] if len(alumno)>10 else alumno[4],'centro':alumno[8] if len(alumno)>8 else alumno[5],'foto':alumno[11] if len(alumno)>10 else alumno[3],'curso':alumno[13] if len(alumno)>13 else '', 'anio':alumno[9] if len(alumno)>10 else ''}
+        d=dict(alumno) if isinstance(alumno,dict) else {'nombre':alumno[1],'apellidos':alumno[2],'codigo_alumno':alumno[10] if len(alumno)>10 else alumno[4],'centro':alumno[8] if len(alumno)>8 else alumno[5],'foto':alumno[11] if len(alumno)>10 else alumno[3],'curso':alumno[13] if len(alumno)>13 else '', 'lugar_nacimiento':alumno[3],'distrito':alumno[4],'provincia':alumno[5],'telefono':alumno[6],'email':alumno[7],'anio':alumno[9] if len(alumno)>10 else '', 'observaciones':alumno[14] if len(alumno)>14 else ''}
         foto_url = f"/fotos/{d.get('foto')}" if d.get('foto') else ""
-        foto_html = f"<img src='{foto_url}' style='width:200px;border-radius:10px;border:2px solid #ddd' onerror=\"this.outerHTML='<div class=text-muted>Foto no disponible en servidor (se borra al reiniciar en Render)</div>'\">" if foto_url else "<small>Sin foto</small>"
+        foto_html = f"<img src='{foto_url}' style='width:200px;border-radius:10px;border:2px solid #ddd' onerror=\"this.outerHTML='<div class=text-muted>Foto no disponible</div>'\">" if foto_url else "<small>Sin foto</small>"
         import json
         html=""
-        html+=f"<div class='mb-3'><b>Nombre:</b> {d.get('nombre')} {d.get('apellidos')}<br><b>Codigo:</b> {d.get('codigo_alumno')} | <b>Centro:</b> {d.get('centro')} | <b>Curso:</b> {d.get('curso')} | <b>Anio:</b> {d.get('anio','')}</div><hr>"
+        html+=f"<div class='mb-3'><b>Nombre:</b> {d.get('nombre')} {d.get('apellidos')}<br><b>Codigo:</b> {d.get('codigo_alumno')} | <b>Curso:</b> {d.get('curso')}<br><b>Lugar Nac:</b> {d.get('lugar_nacimiento','')} | <b>Distrito:</b> {d.get('distrito','')} | <b>Provincia:</b> {d.get('provincia','')}<br><b>Contacto:</b> {d.get('telefono','')} | <b>Email:</b> {d.get('email','')}<br><b>Centro:</b> {d.get('centro')} | <b>Año:</b> {d.get('anio','')}<br><b>Observaciones:</b> {d.get('observaciones','')}</div><hr>"
         if nt_data:
             nd=dict(nt_data) if isinstance(nt_data,dict) else {'datos':nt_data[3],'curso':nt_data[2]}
             try:
