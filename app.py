@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'CEACGE-V28-8-FOTOS-FIX'
+app.secret_key = 'CEACGE-V28-9-ELIMINAR'
 basedir = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = os.path.join(basedir, "fotos")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -57,21 +57,18 @@ def gen_qr(txt):
         return f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(txt)}"
 
 def get_foto_html(d, width=220, height=270):
-    """FIX FOTOS: Si el archivo /fotos/ no existe, usa foto_data guardada en BD"""
     foto_nombre = d.get('foto') if isinstance(d,dict) else None
     foto_data = d.get('foto_data') if isinstance(d,dict) else None
-    # Si tenemos foto_data base64 en BD, usamos eso (no se borra en Render)
     if foto_data and len(foto_data) > 100:
         if foto_data.startswith('data:'):
             return f"<img src='{foto_data}' style='width:{width}px;height:{height}px;object-fit:cover;border-radius:8px;border:3px solid #0d6efd'>"
         else:
             return f"<img src='data:image/jpeg;base64,{foto_data}' style='width:{width}px;height:{height}px;object-fit:cover;border-radius:8px;border:3px solid #0d6efd'>"
-    # Si no, intenta archivo fisico
     if foto_nombre:
         ruta = os.path.join(UPLOAD_FOLDER, foto_nombre)
         if os.path.exists(ruta):
-            return f"<img src='/fotos/{foto_nombre}' style='width:{width}px;height:{height}px;object-fit:cover;border-radius:8px;border:3px solid #0d6efd' onerror=\"this.style.display='none'\">"
-    return "<div class='border p-5 text-muted text-center' style='width:220px'>Sin foto carnet<br><small>Sube de nuevo la foto en Editar</small></div>"
+            return f"<img src='/fotos/{foto_nombre}' style='width:{width}px;height:{height}px;object-fit:cover;border-radius:8px;border:3px solid #0d6efd'>"
+    return "<div class='border p-5 text-muted text-center' style='width:220px'>Sin foto carnet<br><small>Sube en Editar</small></div>"
 
 def init_db():
     conn=get_conn(); cur=conn.cursor()
@@ -121,7 +118,7 @@ def init_db():
         except: pass
 init_db()
 
-BASE="<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>CEACGE</title><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body><nav class='navbar navbar-dark bg-primary'><div class='container'><a class='navbar-brand' href='/dashboard'>CEACGE V28.8</a><div><a href='/dashboard' class='btn btn-sm btn-warning me-2'>Menu</a><a href='/consulta' class='btn btn-sm btn-light me-2'>Consulta</a><span class='text-white me-2'>{{session.usuario}} ({{session.rol}})</span><a href='/logout' class='text-white'>Salir</a></div></div></nav><div class='container mt-4'>{{content|safe}}</div></body></html>"
+BASE="<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>CEACGE</title><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body><nav class='navbar navbar-dark bg-primary'><div class='container'><a class='navbar-brand' href='/dashboard'>CEACGE V28.9</a><div><a href='/dashboard' class='btn btn-sm btn-warning me-2'>Menu</a><a href='/consulta' class='btn btn-sm btn-light me-2'>Consulta</a><span class='text-white me-2'>{{session.usuario}} ({{session.rol}})</span><a href='/logout' class='text-white'>Salir</a></div></div></nav><div class='container mt-4'>{{content|safe}}</div></body></html>"
 
 @app.route('/')
 def index(): return redirect('/dashboard' if 'usuario' in session else '/login')
@@ -142,7 +139,7 @@ def login():
                 session['centro_codigo']=row['centro_codigo'] if isinstance(row,dict) else row[4]
                 return redirect('/dashboard')
         err="Usuario incorrecto"
-    return render_template_string("<html><head><meta charset='utf-8'><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body class='bg-light'><div class='container d-flex justify-content-center align-items-center vh-100'><div class='card p-4' style='width:360px'><h4 class='text-center'>CEACGE V28.8 FOTOS OK</h4>{% if err %}<div class='alert alert-danger'>{{err}}</div>{% endif %}<form method='post'><input class='form-control mb-2' name='usuario' placeholder='Usuario' required><input class='form-control mb-3' type='password' name='password' placeholder='Pass' required><button class='btn btn-primary w-100'>Entrar</button></form><hr><a href='/consulta' class='btn btn-outline-secondary w-100'>Consulta por Codigo</a></div></div></body></html>", err=err)
+    return render_template_string("<html><head><meta charset='utf-8'><link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body class='bg-light'><div class='container d-flex justify-content-center align-items-center vh-100'><div class='card p-4' style='width:360px'><h4 class='text-center'>CEACGE V28.9 ELIMINAR</h4>{% if err %}<div class='alert alert-danger'>{{err}}</div>{% endif %}<form method='post'><input class='form-control mb-2' name='usuario' placeholder='Usuario' required><input class='form-control mb-3' type='password' name='password' placeholder='Pass' required><button class='btn btn-primary w-100'>Entrar</button></form><hr><a href='/consulta' class='btn btn-outline-secondary w-100'>Consulta por Codigo</a></div></div></body></html>", err=err)
 @app.route('/logout')
 def logout(): session.clear(); return redirect('/login')
 @app.route('/dashboard')
@@ -169,7 +166,7 @@ def alumnos():
     html="<div class='d-flex justify-content-between'><h4>Secundaria y Bach <a href='/alumnos/nuevo' class='btn btn-sm btn-primary'>+ Nuevo</a></h4><a href='/dashboard' class='btn btn-sm btn-secondary'>Menu Principal</a></div><table class='table table-hover'><tr><th>Codigo</th><th>Nombre</th><th>Accion</th></tr>"
     for r in rows:
         d=dict(r) if isinstance(r,dict) else {'id':r[0],'nombre':r[1],'apellidos':r[2],'codigo_alumno':r[10]}
-        html+=f"<tr><td><b>{d['codigo_alumno']}</b></td><td>{d['nombre']} {d['apellidos']}</td><td><a href='/alumno/{d['id']}' class='btn btn-sm btn-primary'>Ver/Notas</a> <a href='/alumno/{d['id']}/editar' class='btn btn-sm btn-warning'>Editar</a> <a href='/alumno/{d['id']}/selectividad' class='btn btn-sm btn-dark'>Selectividad</a></td></tr>"
+        html+=f"<tr><td><b>{d['codigo_alumno']}</b></td><td>{d['nombre']} {d['apellidos']}</td><td><div class='btn-group'><a href='/alumno/{d['id']}' class='btn btn-sm btn-primary'>Ver/Notas</a><a href='/alumno/{d['id']}/editar' class='btn btn-sm btn-warning'>Editar</a><a href='/alumno/{d['id']}/selectividad' class='btn btn-sm btn-dark'>Selectividad</a><a href='/alumno/{d['id']}/eliminar' class='btn btn-sm btn-danger' onclick=\"return confirm('¿Seguro que quieres ELIMINAR a {d['nombre']} {d['apellidos']}? Se borraran tambien sus notas y selectividad')\">Eliminar</a></div></td></tr>"
     html+="</table>"
     return render_template_string(BASE, content=html)
 
@@ -184,12 +181,10 @@ def alumno_nuevo():
             if up.filename:
                 foto_name=secure_filename(f"{codigo}_{up.filename}")
                 file_bytes = up.read()
-                # Guardar archivo fisico
                 try:
                     with open(os.path.join(UPLOAD_FOLDER, foto_name), 'wb') as out:
                         out.write(file_bytes)
                 except: pass
-                # Guardar base64 en BD para que no se borre en Render
                 try:
                     foto_data_b64 = base64.b64encode(file_bytes).decode()
                 except: foto_data_b64=None
@@ -203,7 +198,7 @@ def alumno_nuevo():
     extra = "<input name='centro_codigo' placeholder='Codigo centro (admin)' class='form-control mb-2'>" if session.get('rol')=='admin' else ""
     return render_template_string(BASE, content=f"""
 <a href='/alumnos' class='btn btn-sm btn-secondary mb-2'>Volver</a> <a href='/dashboard' class='btn btn-sm btn-warning mb-2'>Menu Principal</a>
-<h4>Nuevo Sec/Bach - ESBA y Bachillerato V28.8 - FOTOS OK</h4>
+<h4>Nuevo Sec/Bach - V28.9 con ELIMINAR</h4>
 <form method='post' enctype='multipart/form-data' class='row g-2'>
 <div class='col-md-6'><label>Nombre *</label><input name='nombre' class='form-control' required></div>
 <div class='col-md-6'><label>Apellidos *</label><input name='apellidos' class='form-control' required></div>
@@ -218,7 +213,7 @@ def alumno_nuevo():
 <div class='col-md-3'><label>Codigo alumno</label><input name='codigo_alumno' class='form-control'></div>
 <div class='col-md-3'>{extra}</div>
 <div class='col-12'><label>Observaciones del centro</label><textarea name='observaciones' class='form-control' rows='2'></textarea></div>
-<div class='col-md-6'><label>Foto carnet (se guardara para siempre)</label><input type='file' name='foto' class='form-control' accept='image/*'></div>
+<div class='col-md-6'><label>Foto carnet</label><input type='file' name='foto' class='form-control' accept='image/*'></div>
 <div class='col-12 mt-3'><button class='btn btn-primary'>Guardar</button></div>
 </form>
 """)
@@ -257,27 +252,31 @@ def alumno_editar(id):
     try: cur.close(); conn.close()
     except: pass
     foto_actual = get_foto_html(d, 150, 150)
-    return render_template_string(BASE, content=f"""
-<a href='/alumno/{id}' class='btn btn-secondary btn-sm'>Volver</a>
-<h4>Editar {d['codigo_alumno']} - Si la foto no se ve, súbela de nuevo aquí</h4>
-<div class='mb-3'>{foto_actual}</div>
-<form method='post' enctype='multipart/form-data' class='row g-2'>
-<div class='col-md-6'><input name='nombre' value='{d.get('nombre','')}' class='form-control'></div>
-<div class='col-md-6'><input name='apellidos' value='{d.get('apellidos','')}' class='form-control'></div>
-<div class='col-md-4'><input name='lugar_nacimiento' value='{d.get('lugar_nacimiento','')}' class='form-control'></div>
-<div class='col-md-4'><input name='distrito' value='{d.get('distrito','')}' class='form-control'></div>
-<div class='col-md-4'><input name='provincia' value='{d.get('provincia','')}' class='form-control'></div>
-<div class='col-md-4'><input name='telefono' value='{d.get('telefono','')}' class='form-control'></div>
-<div class='col-md-4'><input name='email' value='{d.get('email','')}' class='form-control'></div>
-<div class='col-md-4'><input name='curso' value='{d.get('curso','')}' class='form-control'></div>
-<div class='col-md-4'><input name='centro' value='{d.get('centro','')}' class='form-control'></div>
-<div class='col-md-4'><input name='anio' value='{d.get('anio','')}' class='form-control'></div>
-<div class='col-md-4'><input name='centro_codigo' value='{d.get('centro_codigo','')}' class='form-control'></div>
-<div class='col-12'><textarea name='observaciones' class='form-control'>{d.get('observaciones','')}</textarea></div>
-<div class='col-md-6'><label>Foto carnet - Subir de nuevo si está rota</label><input type='file' name='foto' class='form-control' accept='image/*'></div>
-<div class='col-12'><button class='btn btn-success'>Guardar Cambios - Foto fija</button></div>
-</form>
-""")
+    return render_template_string(BASE, content=f"<a href='/alumno/{id}' class='btn btn-secondary btn-sm'>Volver</a> <h4>Editar {d['codigo_alumno']}</h4><div class='mb-3'>{foto_actual}</div><form method='post' enctype='multipart/form-data' class='row g-2'><div class='col-md-6'><input name='nombre' value='{d.get('nombre','')}' class='form-control'></div><div class='col-md-6'><input name='apellidos' value='{d.get('apellidos','')}' class='form-control'></div><div class='col-md-4'><input name='lugar_nacimiento' value='{d.get('lugar_nacimiento','')}' class='form-control'></div><div class='col-md-4'><input name='distrito' value='{d.get('distrito','')}' class='form-control'></div><div class='col-md-4'><input name='provincia' value='{d.get('provincia','')}' class='form-control'></div><div class='col-md-4'><input name='telefono' value='{d.get('telefono','')}' class='form-control'></div><div class='col-md-4'><input name='email' value='{d.get('email','')}' class='form-control'></div><div class='col-md-4'><input name='curso' value='{d.get('curso','')}' class='form-control'></div><div class='col-md-4'><input name='centro' value='{d.get('centro','')}' class='form-control'></div><div class='col-md-4'><input name='anio' value='{d.get('anio','')}' class='form-control'></div><div class='col-md-4'><input name='centro_codigo' value='{d.get('centro_codigo','')}' class='form-control'></div><div class='col-12'><textarea name='observaciones' class='form-control'>{d.get('observaciones','')}</textarea></div><div class='col-md-6'><label>Foto carnet</label><input type='file' name='foto' class='form-control' accept='image/*'></div><div class='col-12'><button class='btn btn-success'>Guardar Cambios</button></div></form>")
+
+# --- NUEVA RUTA ELIMINAR ALUMNO ---
+@app.route('/alumno/<int:id>/eliminar')
+def alumno_eliminar(id):
+    if 'usuario' not in session: return redirect('/login')
+    conn=get_conn(); cur=conn.cursor()
+    try:
+        cur.execute(adapt("SELECT * FROM alumnos WHERE id=?"), (id,))
+        r=cur.fetchone()
+        if r:
+            d=dict(r) if isinstance(r,dict) else {'codigo_alumno':r[10]}
+            codigo = d.get('codigo_alumno')
+            # Borrar notas historicas, trimestres y selectividad del alumno
+            cur.execute(adapt("DELETE FROM notas_historico WHERE alumno_codigo=?"), (codigo,))
+            cur.execute(adapt("DELETE FROM notas_trimestres WHERE alumno_codigo=?"), (codigo,))
+            cur.execute(adapt("DELETE FROM selectividad WHERE alumno_codigo=?"), (codigo,))
+            cur.execute(adapt("DELETE FROM alumnos WHERE id=?"), (id,))
+            conn.commit()
+    except Exception as e:
+        print(e)
+    finally:
+        try: cur.close(); conn.close()
+        except: pass
+    return redirect('/alumnos')
 
 @app.route('/alumno/<int:id>')
 def alumno_ver(id):
@@ -331,7 +330,16 @@ def alumno_ver(id):
     document.querySelector('select[name=anio_academico]').addEventListener('change', cargar); cargar();
     </script>
     """
-    return render_template_string(BASE, content=f"<a href='/alumnos' class='btn btn-secondary btn-sm'>Volver</a> <a href='/alumno/{id}/editar' class='btn btn-warning btn-sm'>Editar</a><a href='/alumno/{id}/selectividad' class='btn btn-dark btn-sm'>Selectividad</a><div class='row mt-3'><div class='col-md-8'><h4>{d['nombre']} {d['apellidos']} ({d['codigo_alumno']})</h4>{hist_html}{form_html}</div><div class='col-md-4 text-center'>{foto_html}<br><br><img src='{qr}' style='width:180px'></div></div>")
+    return render_template_string(BASE, content=f"""
+<div class='d-flex gap-2 mb-2'>
+<a href='/alumnos' class='btn btn-secondary btn-sm'>Volver Listado</a>
+<a href='/dashboard' class='btn btn-warning btn-sm'>Menu Principal</a>
+<a href='/alumno/{id}/editar' class='btn btn-warning btn-sm'>Editar</a>
+<a href='/alumno/{id}/selectividad' class='btn btn-dark btn-sm'>Selectividad</a>
+<a href='/alumno/{id}/eliminar' class='btn btn-danger btn-sm' onclick="return confirm('¿Seguro que quieres ELIMINAR definitivamente a {d['nombre']} {d['apellidos']}? Se borraran todas sus notas y selectividad')">Eliminar Alumno</a>
+</div>
+<div class='row mt-3'><div class='col-md-8'><h4>{d['nombre']} {d['apellidos']} ({d['codigo_alumno']})</h4>{hist_html}{form_html}</div><div class='col-md-4 text-center'>{foto_html}<br><br><img src='{qr}' style='width:180px'></div></div>
+""")
 
 @app.route('/alumno/<int:id>/notas_historico/guardar', methods=['POST'])
 def guardar_historico(id):
@@ -470,7 +478,7 @@ def consulta():
             sel_data=cur.fetchall()
         try: cur.close(); conn.close()
         except: pass
-    content=f"<h3 class='text-center'>Consulta Publica V28.8 - FOTOS OK</h3><form method='post' class='d-flex justify-content-center gap-2 mt-3'><input name='codigo' value='{codigo or ''}' placeholder='Codigo Alumno' class='form-control' style='max-width:350px' required><button class='btn btn-primary'>Buscar</button></form>"
+    content=f"<h3 class='text-center'>Consulta Publica V28.9</h3><form method='post' class='d-flex justify-content-center gap-2 mt-3'><input name='codigo' value='{codigo or ''}' placeholder='Codigo Alumno' class='form-control' style='max-width:350px' required><button class='btn btn-primary'>Buscar</button></form>"
     if codigo and not alumno: content+=f"<div class='alert alert-danger mt-4 text-center'>Codigo {codigo} no encontrado</div>"
     if alumno:
         d=dict(alumno) if isinstance(alumno,dict) else {'nombre':alumno[1],'apellidos':alumno[2],'codigo_alumno':alumno[10] if len(alumno)>10 else alumno[4],'centro':alumno[8] if len(alumno)>8 else alumno[5],'curso':alumno[13] if len(alumno)>13 else '', 'lugar_nacimiento':alumno[3],'distrito':alumno[4],'provincia':alumno[5],'telefono':alumno[6],'email':alumno[7],'anio':alumno[9] if len(alumno)>10 else '', 'observaciones':alumno[14] if len(alumno)>14 else '', 'foto':alumno[11] if len(alumno)>10 else '', 'foto_data':alumno[15] if len(alumno)>15 else ''}
@@ -498,7 +506,7 @@ def consulta():
                 html_notas+="</table>"
             except: pass
         if sel_data:
-            html_notas+="<h5 class='mt-4'>SELECTIVIDAD - Fase 1 y Fase 2 separadas</h5><table class='table table-bordered'><tr><th>Fase</th><th>Bloque</th><th>Asignatura</th><th>Nota Fase 1</th><th>Nota Fase 2</th></tr>"
+            html_notas+="<h5 class='mt-4'>SELECTIVIDAD - Fase 1 y Fase 2</h5><table class='table table-bordered'><tr><th>Fase</th><th>Bloque</th><th>Asignatura</th><th>Nota Fase 1</th><th>Nota Fase 2</th></tr>"
             for s in sel_data:
                 sd=dict(s) if isinstance(s,dict) else {}
                 if sd: n1=sd.get('nota',''); n2=sd.get('nota2',''); fase=sd.get('fase',''); asig=sd.get('asignatura',''); bloque=sd.get('bloque','')
@@ -513,8 +521,7 @@ def fotos(filename):
     try:
         return send_from_directory(UPLOAD_FOLDER, filename)
     except:
-        # Si el archivo no existe en disco pero tenemos foto_data en BD, no hay archivo que servir
-        return "Foto no encontrada en disco - usa foto_data de BD", 404
+        return "Foto no encontrada", 404
 
 if __name__=='__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5000)))
