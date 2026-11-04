@@ -898,5 +898,84 @@ def fotos(filename):
     try: return send_from_directory(UPLOAD_FOLDER, filename)
     except: return "Foto no encontrada", 404
 
+    @app.route('/centros')
+def centros():
+    if 'usuario' not in session: return redirect('/login')
+    conn=get_conn(); cur=conn.cursor()
+    cur.execute("SELECT * FROM centros ORDER BY id DESC"); rows=cur.fetchall()
+    try: cur.close(); conn.close()
+    except: pass
+    btn_nuevo = "<a href='/centros/nuevo' class='btn btn-sm btn-warning'>+ Nuevo Centro</a>" if session.get('rol')=='admin' else ""
+    html=f"<div class='d-flex justify-content-between'><h4>Centros {btn_nuevo}</h4><a href='/dashboard' class='btn btn-sm btn-secondary'>Menu</a></div><table class='table'><tr><th>Nombre</th><th>Codigo</th><th>Localidad</th><th>Accion</th></tr>"
+    for r in rows:
+        d=dict(r) if isinstance(r,dict) else {'id':r[0],'nombre':r[1],'codigo':r[2],'localidad':r[3] if len(r)>3 else ''}
+        btns = ""
+        if session.get('rol')=='admin':
+            btns = f"<a href='/centros/{d['id']}/editar' class='btn btn-sm btn-warning'>Editar</a> <a href='/centros/{d['id']}/eliminar' class='btn btn-sm btn-danger' onclick=\"return confirm('Eliminar centro?')\">Eliminar</a>"
+        html+=f"<tr><td>{d['nombre']}</td><td>{d['codigo']}</td><td>{d.get('localidad','')}</td><td>{btns}</td></tr>"
+    html+="</table>"
+    return render_template_string(BASE, content=html)
+
+@app.route('/centros/<int:id>/editar', methods=['GET','POST'])
+def centro_editar(id):
+    if 'usuario' not in session: return redirect('/login')
+    if session.get('rol')!='admin': return render_template_string(BASE, content="<div class='alert alert-danger'>Solo admin</div>")
+    conn=get_conn(); cur=conn.cursor()
+    cur.execute(adapt("SELECT * FROM centros WHERE id=?"), (id,)); r=cur.fetchone()
+    if not r: return "No encontrado",404
+    d=dict(r) if isinstance(r,dict) else {'id':r[0],'nombre':r[1],'codigo':r[2],'localidad':r[3] if len(r)>3 else '','contacto':r[4] if len(r)>4 else '','email':r[5] if len(r)>5 else ''}
+    if request.method=='POST':
+        f=request.form
+        cur.execute(adapt("UPDATE centros SET nombre=?, codigo=?, localidad=?, contacto=?, email=? WHERE id=?"), (f.get('nombre'),f.get('codigo'),f.get('localidad'),f.get('contacto'),f.get('email'),id))
+        conn.commit()
+        try: cur.close(); conn.close()
+        except: pass
+        return redirect('/centros')
+    try: cur.close(); conn.close()
+    except: pass
+    return render_template_string(BASE, content=f"<h4>Editar Centro</h4><form method='post'><input name='nombre' value='{d.get('nombre','')}' class='form-control mb-2' required><input name='codigo' value='{d.get('codigo','')}' class='form-control mb-2'><input name='localidad' value='{d.get('localidad','')}' class='form-control mb-2'><input name='contacto' value='{d.get('contacto','')}' class='form-control mb-2'><input name='email' value='{d.get('email','')}' class='form-control mb-2'><button class='btn btn-warning'>Guardar</button> <a href='/centros' class='btn btn-secondary'>Volver</a></form>")
+
+@app.route('/centros/<int:id>/eliminar')
+def centro_eliminar(id):
+    if 'usuario' not in session: return redirect('/login')
+    if session.get('rol')!='admin': return render_template_string(BASE, content="<div class='alert alert-danger'>Solo admin</div>")
+    conn=get_conn(); cur=conn.cursor()
+    cur.execute(adapt("DELETE FROM centros WHERE id=?"), (id,)); conn.commit()
+    try: cur.close(); conn.close()
+    except: pass
+    return redirect('/centros')
+
+@app.route('/usuarios', methods=['GET','POST'])
+def usuarios():
+    if 'usuario' not in session: return redirect('/login')
+    if session.get('rol') != 'admin':
+        return render_template_string(BASE, content=f"<div class='alert alert-danger'>Solo admin - Tu rol: {session.get('rol','')}</div>")
+    conn=get_conn(); cur=conn.cursor()
+    if request.method=='POST':
+        u=request.form.get('usuario'); p=request.form.get('password'); rol=request.form.get('rol'); cc=request.form.get('centro_codigo')
+        try:
+            cur.execute(adapt("INSERT INTO usuarios (usuario,password,rol,centro_codigo) VALUES (?,?,?,?)"), (u, generate_password_hash(p), rol, cc))
+            conn.commit()
+        except: pass
+    cur.execute("SELECT * FROM usuarios ORDER BY id"); rows=cur.fetchall()
+    try: cur.close(); conn.close()
+    except: pass
+    html="<h4>Usuarios</h4><table class='table'><tr><th>Usuario</th><th>Rol</th><th>Centro</th><th>Accion</th></tr>"
+    for r in rows:
+        d=dict(r) if isinstance(r,dict) else {'id':r[0],'usuario':r[1],'rol':r[3],'centro_codigo':r[4]}
+        html+=f"<tr><td>{d['usuario']}</td><td>{d['rol']}</td><td>{d['centro_codigo']}</td><td><a href='/usuarios/{d.get('id','')}/eliminar' class='btn btn-sm btn-danger' onclick=\"return confirm('Eliminar usuario?')\">Eliminar</a></td></tr>"
+    html+="</table><hr><h5>Crear Usuario</h5><form method='post' class='row g-2'><div class='col-md-3'><input name='usuario' placeholder='Usuario' class='form-control' required></div><div class='col-md-3'><input name='password' placeholder='Password' class='form-control' required></div><div class='col-md-2'><select name='rol' class='form-control'><option value='admin'>admin</option><option value='centro'>centro</option></select></div><div class='col-md-2'><input name='centro_codigo' placeholder='Codigo centro' class='form-control'></div><div class='col-md-2'><button class='btn btn-dark'>Crear</button></div></form>"
+    return render_template_string(BASE, content=html)
+
+@app.route('/usuarios/<int:id>/eliminar')
+def usuario_eliminar(id):
+    if 'usuario' not in session: return redirect('/login')
+    if session.get('rol')!='admin': return render_template_string(BASE, content="<div class='alert alert-danger'>Solo admin</div>")
+    conn=get_conn(); cur=conn.cursor()
+    cur.execute(adapt("DELETE FROM usuarios WHERE id=?"), (id,)); conn.commit()
+    try: cur.close(); conn.close()
+    except: pass
+    return redirect('/usuarios')
+
 if __name__=='__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5000)))
