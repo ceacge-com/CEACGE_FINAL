@@ -897,8 +897,7 @@ def api_apk_registro():
 def fotos(filename):
     try: return send_from_directory(UPLOAD_FOLDER, filename)
     except: return "Foto no encontrada", 404
-
-    @app.route('/centros')
+@app.route('/centros')
 def centros():
     if 'usuario' not in session: return redirect('/login')
     conn=get_conn(); cur=conn.cursor()
