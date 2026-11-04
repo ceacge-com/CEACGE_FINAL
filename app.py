@@ -269,7 +269,7 @@ def alumno_eliminar(id):
         try: cur.close(); conn.close()
         except: pass
     return redirect('/alumnos')
-    @app.route('/alumno/<int:id>')
+@app.route('/alumno/<int:id>')
 def alumno_ver(id):
     if 'usuario' not in session: return redirect('/login')
     conn=get_conn(); cur=conn.cursor()
